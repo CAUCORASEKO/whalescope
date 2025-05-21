@@ -1,0 +1,30 @@
+# .gitignore
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+whalescope.db
+
+# Archivos generados por scripts Python
+*.json
+*.txt
+bitinfocharts.html
+cache/
+
+# Excepciones para Node.js y otros archivos necesarios
+!package.json
+!package-lock.json
+!requirements.txt
+
+# Node/Electron
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store

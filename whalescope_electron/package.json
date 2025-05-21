@@ -1,0 +1,24 @@
+{
+  "name": "whalescope_electron",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "whalescope",
+    "crypto",
+    "electron"
+  ],
+  "author": "Cauco",
+  "license": "ISC",
+  "description": "WhaleScope Electron App for Cryptocurrency Analysis",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.9",
+    "sqlite3": "^5.1.7"
+  }
+}
