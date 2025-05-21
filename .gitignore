@@ -1,5 +1,3 @@
-# .gitignore
-
 # Python
 venv/
 __pycache__/
@@ -8,13 +6,13 @@ __pycache__/
 *.pyd
 whalescope.db
 
-# Archivos generados por scripts Python
+# Archivos generados
 *.json
 *.txt
 bitinfocharts.html
 cache/
 
-# Excepciones para Node.js y otros archivos necesarios
+# Excepciones
 !package.json
 !package-lock.json
 !requirements.txt
@@ -28,3 +26,12 @@ dist/
 
 # macOS
 .DS_Store
+
+# Entornos y herramientas adicionales
+.env
+.venv
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pypirc

@@ -1,2 +1,4 @@
+Corrige a:
+```markdown
 # WhaleScope
-Työkalu Bitcoin-markkinan strategiseen analyysiin
+Tool for analyzing Bitcoin market data with an Electron-based UI.
