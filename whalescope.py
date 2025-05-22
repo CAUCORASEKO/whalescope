@@ -1,3 +1,5 @@
+# whalescope.py 
+
 import sys
 import subprocess
 import json
@@ -5,7 +7,7 @@ import argparse
 import os
 import logging
 
-# Configurar logging a un archivo en lugar de stdout
+# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -48,24 +50,42 @@ def update_data(mode, start_date=None, end_date=None):
             python_command = 'python3'
             logger.warning(f"Python del entorno virtual no encontrado, usando {python_command}")
         
-        # Pass start_date and end_date as positional arguments
+        # Construir comando
         cmd = [python_command, script]
         if start_date and end_date:
             cmd.extend(['--start-date', start_date, '--end-date', end_date])
         
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        logger.info(f"Resultado de {script}: {result.stdout}")
+        logger.info(f"Comando completo: {' '.join(cmd)}")
+        
+        # Ejecutar comando con entorno limpio
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            env={**os.environ, "PYTHONUNBUFFERED": "1"}  # Forzar salida sin buffer
+        )
+        
+        # Registrar salida completa
+        logger.info(f"Stdout de {script}: {result.stdout}")
         if result.stderr:
-            logger.error(f"Errores en {script}: {result.stderr}")
+            logger.error(f"Stderr de {script}: {result.stderr}")
         
         try:
-            data = json.loads(result.stdout)
+            # Limpiar stdout y parsear
+            stdout_clean = result.stdout.strip()
+            if not stdout_clean:
+                logger.error(f"Stdout está vacío para {script}")
+                return {"error": "Stdout está vacío"}
+            
+            data = json.loads(stdout_clean)
             with open(output_file, 'w') as f:
-                json.dump(data, f)
+                json.dump(data, f, indent=2)
             logger.info(f"Datos guardados en {output_file}")
             return data
         except json.JSONDecodeError as e:
             logger.error(f"Error al parsear la salida de {script}: {e}")
+            logger.error(f"Contenido de stdout: '{result.stdout}'")
             return {"error": f"Invalid JSON output from {script}: {e}"}
     except subprocess.CalledProcessError as e:
         logger.error(f"Error al ejecutar {script}: {e}")
@@ -93,5 +113,5 @@ if __name__ == "__main__":
         results[mode] = result
 
     # Imprimir solo JSON en stdout
-    sys.stdout.write(json.dumps(results[args.mode] if args.mode != 'all' else results))
+    print(json.dumps(results[args.mode] if args.mode != 'all' else results))
     sys.stdout.flush()
