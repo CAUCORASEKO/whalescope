@@ -16,37 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`[Renderer] refreshBtn exists: ${!!document.getElementById('refreshBtn')}`);
     console.log(`[Renderer] blackrock-refreshBtn exists: ${!!document.getElementById('blackrock-refreshBtn')}`);
 
-    // Set initial date range
     const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Default to 30 days
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     console.log(`[Renderer] Initial date range: start=${startDate}, end=${endDate}`);
 
-    // Initialize date inputs
     ['startDate', 'endDate', 'blackrock-startDate', 'blackrock-endDate'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.value = id.includes('start') ? startDate : endDate;
             console.log(`[Renderer] Initialized ${id} with value: ${input.value}`);
         } else {
-            console.log(`[Renderer] Input ${id} not found`);
+            console.error(`[Renderer] Input ${id} not found`);
         }
     });
 
     loadSectionData('bitcoin', startDate, endDate);
 
-    // Handle section change
     document.addEventListener('sectionChange', (event) => {
+        console.log(`[Renderer] Section change event received:`, event);
         const section = event.detail?.section;
-        console.log(`[Renderer] Section change event: ${section}`);
+        console.log(`[Renderer] Section parsed: ${section}`);
         if (section) {
             const startDateInput = document.getElementById(`${section}-startDate`)?.value || startDate;
             const endDateInput = document.getElementById(`${section}-endDate`)?.value || endDate;
             console.log(`[Renderer] Loading ${section} with start=${startDateInput}, end=${endDateInput}`);
             loadSectionData(section, startDateInput, endDateInput);
+        } else {
+            console.error(`[Renderer] Invalid section in sectionChange event:`, event.detail);
         }
     });
 
-    // Handle refresh button for Bitcoin
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
@@ -57,16 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[Renderer] Refreshing bitcoin data with start=${startDateInput}, end=${endDateInput}`);
                 loadSectionData('bitcoin', startDateInput, endDateInput);
             } else {
-                console.log('[Renderer] Invalid date range for bitcoin refresh');
+                console.error('[Renderer] Invalid date range for bitcoin refresh');
                 const status = document.getElementById('bitcoin-status');
                 if (status) status.innerHTML = 'Error: Please select valid start and end dates';
             }
         });
     } else {
-        console.log('[Renderer] refreshBtn not found');
+        console.error('[Renderer] refreshBtn not found');
     }
 
-    // Handle refresh button for BlackRock
     const blackrockRefreshBtn = document.getElementById('blackrock-refreshBtn');
     if (blackrockRefreshBtn) {
         blackrockRefreshBtn.addEventListener('click', () => {
@@ -77,16 +75,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`[Renderer] Refreshing blackrock data with start=${startDateInput}, end=${endDateInput}`);
                 loadSectionData('blackrock', startDateInput, endDateInput);
             } else {
-                console.log('[Renderer] Invalid date range for blackrock refresh');
+                console.error('[Renderer] Invalid date range for blackrock refresh');
                 const status = document.getElementById('blackrock-status');
                 if (status) status.innerHTML = 'Error: Please select valid start and end dates';
             }
         });
     } else {
-        console.log('[Renderer] blackrock-refreshBtn not found');
+        console.error('[Renderer] blackrock-refreshBtn not found');
     }
 
-    // Handle window resize to update charts
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
@@ -106,10 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('[Renderer] Resizing wallets chart');
                 walletsChart.chartInstance.resize();
             }
-        }, 200); // Debounce de 200ms
+        }, 200);
     });
 });
 
+// Resto del código (loadSectionData) permanece igual
 async function loadSectionData(section, startDate, endDate) {
     console.log(`[Renderer] loadSectionData called for ${section} with start=${startDate}, end=${endDate}`);
     const status = document.getElementById(`${section}-status`);
@@ -127,7 +125,7 @@ async function loadSectionData(section, startDate, endDate) {
         console.log(`[Renderer] Received data for ${section}:`, JSON.stringify(data, null, 2));
 
         if (data.error) {
-            console.log(`[Renderer] Error: ${data.error}`);
+            console.error(`[Renderer] Error: ${data.error}`);
             if (status) status.innerHTML = `Error: ${data.error}`;
             if (loading) loading.style.display = 'none';
             return;
@@ -456,7 +454,7 @@ async function loadSectionData(section, startDate, endDate) {
             }
         }
     } catch (err) {
-        console.log(`[Renderer] Error: ${err.message}`);
+        console.error(`[Renderer] Error: ${err.message}`);
         if (status) status.innerHTML = `Error: ${err.message}`;
         if (loading) loading.style.display = 'none';
     }

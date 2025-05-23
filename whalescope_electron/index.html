@@ -7,7 +7,7 @@
   <title>WhaleScope</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.min.js" integrity="sha512-L0Shl7nXXzIlBS4pyhH4nljHKaJwv9S1N6ddyB/O6Y5/cm48oJcyj1M7rN0uoN9MhZ4N00fR1bvXWyUtASQB+0w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -177,7 +177,6 @@
       font-weight: 600;
       color: #0d6efd;
     }
-    /* Media Queries para responsividad */
     @media (min-width: 768px) {
       .card {
         flex: 1 1 calc(50% - 10px);
@@ -260,8 +259,6 @@
     <button class="navBtn" data-section="lido-section" onclick="window.showSection('lido')">Lido</button>
   </div>
 
-  <button onclick="window.electronAPI.loadData({section: 'bitcoin', startDate: '2024-11-11', endDate: '2025-05-18'}).then(data => console.log('[Test IPC] Data:', JSON.stringify(data, null, 2))).catch(err => console.log('[Test IPC] Error:', err.message))">Test IPC</button>
-
   <!-- Bitcoin Section -->
   <div id="bitcoin-section" class="section active">
     <h2>🧠 Bitcoin Analytics</h2>
@@ -270,9 +267,9 @@
 
     <div id="filters">
       <label for="startDate">Start Date:</label>
-      <input id="startDate" type="date" value="2024-11-11" />
+      <input id="startDate" type="date" value="2025-05-01" />
       <label for="endDate">End Date:</label>
-      <input id="endDate" type="date" value="2025-05-18" />
+      <input id="endDate" type="date" value="2025-05-22" />
       <button id="refreshBtn">🔄 Refresh Data</button>
       <button id="exportCsvBtn">📤 Export CSV</button>
       <button id="exportPdfBtn">📤 Export PDF</button>
@@ -380,9 +377,9 @@
 
     <div id="blackrock-filters">
       <label for="blackrock-startDate">Start Date:</label>
-      <input id="blackrock-startDate" type="date" value="2024-11-11" />
+      <input id="blackrock-startDate" type="date" value="2025-05-01" />
       <label for="blackrock-endDate">End Date:</label>
-      <input id="blackrock-endDate" type="date" value="2025-05-18" />
+      <input id="blackrock-endDate" type="date" value="2025-05-22" />
       <button id="blackrock-refreshBtn">🔄 Refresh Data</button>
       <button id="blackrock-exportCsvBtn">📤 Export CSV</button>
       <button id="blackrock-exportPdfBtn">📤 Export PDF</button>
@@ -390,7 +387,7 @@
 
     <div class="flex-row">
       <div class="card">
-        <h3>📊 Market Stats (BTC)</h3>
+        <h3>📊 Market Stats (IBIT)</h3>
         <div class="table-container">
           <table>
             <thead>
@@ -426,6 +423,18 @@
               <tr><td colspan="5" class="centered-cell">Loading data...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-row">
+      <div class="analysis-card">
+        <h3>🔍 Market Analysis (Yahoo Finance)</h3>
+        <div id="blackrock-analysis">
+          <p><strong>Recommendation:</strong> <span id="blackrock-recommendation">Loading...</span></p>
+          <p><strong>Target Price:</strong> <span id="blackrock-target-price">Loading...</span></p>
+          <p><strong>Rating Summary:</strong> <span id="blackrock-rating-summary">Loading...</span></p>
+          <p><strong>Earnings Estimate:</strong> <span id="blackrock-earnings-estimate">Loading...</span></p>
         </div>
       </div>
     </div>
@@ -507,35 +516,39 @@
     console.log('[Index] Script loaded');
     
     window.showSection = function(section) {
-      console.log('[Index] showSection called with section:', section);
+      console.log(`[Index] showSection called with: ${section}`);
       try {
         const buttons = document.querySelectorAll('.navBtn');
         const sections = document.querySelectorAll('.section');
 
-        console.log('[Index] Found buttons:', buttons.length);
-        console.log('[Index] Found sections:', sections.length);
+        console.log(`[Index] Found ${buttons.length} buttons`);
+        console.log(`[Index] Found ${sections.length} sections`);
 
         buttons.forEach(btn => btn.classList.remove('active'));
         sections.forEach(sec => sec.classList.remove('active'));
 
         const btn = document.querySelector(`.navBtn[data-section="${section}-section"]`);
         const sec = document.getElementById(`${section}-section`);
-        console.log('[Index] Selected button:', btn);
-        console.log('[Index] Selected section:', sec);
+        console.log('[Index] Selected button:', btn ? btn.outerHTML : 'null');
+        console.log('[Index] Selected section:', sec ? sec.id : 'null');
 
         if (btn && sec) {
           btn.classList.add('active');
           sec.classList.add('active');
           console.log('[Index] Added active class to button and section');
-        } else {
-          console.error('[Index] Button or section not found for:', section);
-        }
 
-        const event = new CustomEvent('sectionChange', { detail: { section } });
-        window.dispatchEvent(event);
-        console.log('[Index] Dispatched sectionChange event for:', section);
+          const event = new CustomEvent('sectionChange', { 
+            detail: { section: section },
+            bubbles: true,
+            cancelable: true
+          });
+          console.log(`[Index] Dispatching sectionChange event for: ${section}`, event);
+          document.dispatchEvent(event);
+        } else {
+          console.error(`[Index] Button or section not found for: ${section}`);
+        }
       } catch (error) {
-        console.error('[Index] Error in showSection:', error);
+        console.error('[Index] Error in showSection:', error.message, error.stack);
       }
     };
 
