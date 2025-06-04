@@ -18,7 +18,7 @@ current_date_str = current_date.strftime('%Y-%m-%d')
 
 # Base de datos SQLite (ruta dinámica)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "whalescope_electron", "whalescope.db")
+DB_PATH = os.path.join(BASE_DIR, "whalescope.db")
 conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS macro_events
@@ -33,12 +33,13 @@ def fetch_fed_data():
         "api_key": FRED_API_KEY,
         "file_type": "json",
         "observation_start": "2020-01-01",
-        "observation_end": "2025-12-31"
+        "observation_end": current_date_str
     }
     
     try:
         response = requests.get(fred_url, params=params, verify=False, timeout=10)
         if response.status_code != 200:
+            print(f"Error fetching FED data: {response.status_code}")
             return []
         
         data = response.json()
@@ -63,9 +64,11 @@ def fetch_fed_data():
                 })
             previous_value = value
         
+        print(f"Fetched {len(fed_events)} FED events")
         return fed_events
     
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
         return []
 
 # Recolectar y almacenar datos
@@ -78,6 +81,7 @@ if fed_data:
         cursor.execute("INSERT OR REPLACE INTO macro_events (date, title, description, source, timestamp) VALUES (?, ?, ?, ?, ?)",
                        (event['date'], event['title'], event['description'], event['source'], timestamp))
     conn.commit()
+    print("FED data saved to database")
 
 # Cerrar conexión a SQLite
 conn.close()
