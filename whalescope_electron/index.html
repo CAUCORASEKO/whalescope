@@ -69,7 +69,7 @@
       font-size: 1.1em;
       color: #ffffff;
     }
-    #priceTrendChart, #feesChart, #walletsChart {
+    #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart {
       width: 100%;
       height: 50vh;
       min-height: 200px;
@@ -177,6 +177,20 @@
       font-weight: 600;
       color: #0d6efd;
     }
+    #blackrock-totalBalanceTable table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #cccccc;
+      background-color: #1e1e1e;
+    }
+    #blackrock-totalBalanceTable th, #blackrock-totalBalanceTable td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    #blackrock-totalBalanceTable th {
+      background-color: #333;
+    }
     @media (min-width: 768px) {
       .card {
         flex: 1 1 calc(50% - 10px);
@@ -243,7 +257,7 @@
         font-size: 0.75em;
         padding: 6px;
       }
-      #priceTrendChart, #feesChart, #walletsChart {
+      #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart {
         height: 40vh;
         min-height: 150px;
       }
@@ -322,7 +336,7 @@
           <table>
             <thead>
               <tr>
-                <th>Date &amp; Time</th>
+                <th>Date & Time</th>
                 <th>Input (USD)</th>
                 <th>Output (USD)</th>
                 <th>Status</th>
@@ -379,63 +393,34 @@
       <label for="blackrock-startDate">Start Date:</label>
       <input id="blackrock-startDate" type="date" value="2025-05-01" />
       <label for="blackrock-endDate">End Date:</label>
-      <input id="blackrock-endDate" type="date" value="2025-05-22" />
+      <input id="blackrock-endDate" type="date" value="2025-06-05" />
       <button id="blackrock-refreshBtn">🔄 Refresh Data</button>
-      <button id="blackrock-exportCsvBtn">📤 Export CSV</button>
+      <button id="blackrock-exportBtn">📤 Export CSV</button> <!-- MODIFICADO: Renombrado -->
       <button id="blackrock-exportPdfBtn">📤 Export PDF</button>
     </div>
 
     <div class="flex-row">
       <div class="card">
-        <h3>📊 Market Stats (IBIT)</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="blackrock-marketStatsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <h3>💰 Total Account Balance</h3>
+        <div id="blackrock-totalBalanceError" class="error"></div>
+        <p id="blackrock-totalBalance">Loading...</p>
       </div>
-      <div class="card card-flex-large card-overflow-x-auto">
-        <h3>💰 Top Wallets</h3>
-        <div class="chart-container">
-          <canvas id="walletsChart"></canvas>
-        </div>
-        <div id="walletsChartError" class="error"></div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Address</th>
-                <th>Token</th>
-                <th>Balance</th>
-                <th>Balance (USD)</th>
-                <th>Category</th>
-              </tr>
-            </thead>
-            <tbody id="blackrock-walletsTableBody">
-              <tr><td colspan="5" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="card card-flex-large">
+        <h3>📊 Historical Total Balance</h3>
+        <div id="blackrock-totalBalanceTable"></div> <!-- NUEVO -->
       </div>
     </div>
 
     <div class="flex-row">
-      <div class="analysis-card">
-        <h3>🔍 Market Analysis (Yahoo Finance)</h3>
-        <div id="blackrock-analysis">
-          <p><strong>Recommendation:</strong> <span id="blackrock-recommendation">Loading...</span></p>
-          <p><strong>Target Price:</strong> <span id="blackrock-target-price">Loading...</span></p>
-          <p><strong>Rating Summary:</strong> <span id="blackrock-rating-summary">Loading...</span></p>
-          <p><strong>Earnings Estimate:</strong> <span id="blackrock-earnings-estimate">Loading...</span></p>
-        </div>
+      <div class="card card-flex-large">
+        <h3>📈 BTC Balance Over Time</h3>
+        <div id="btcBalanceChartError" class="error"></div>
+        <div id="btcBalanceChart"></div>
+      </div>
+      <div class="card card-flex-large">
+        <h3>📈 ETH Balance Over Time</h3>
+        <div id="ethBalanceChartError" class="error"></div>
+        <div id="ethBalanceChart"></div>
       </div>
     </div>
   </div>
@@ -478,7 +463,7 @@
           </table>
         </div>
       </div>
-      <div class="card card-overflow-x-auto">
+      <div class="card">
         <h3>🔍 Analytics</h3>
         <div class="table-container">
           <table>
