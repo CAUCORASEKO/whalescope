@@ -4,10 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[Renderer] DOM content loaded');
     // Verify existence of HTML elements
     const elements = [
-        'bitcoin-status', 'blackrock-status', 'bitcoin-loading', 'blackrock-loading',
-        'priceTrendChart', 'feesChart', 'refreshBtn', 'blackrock-refreshBtn',
-        'blackrock-totalBalance', 'btcBalanceChart', 'ethBalanceChart',
-        'blackrock-totalBalanceTable'
+        'bitcoin-status', 'blackrock-status', 'lido-status',
+        'bitcoin-loading', 'blackrock-loading', 'lido-loading',
+        'priceTrendChart', 'feesChart', 'refreshBtn', 'blackrock-refreshBtn', 'lido-refreshBtn',
+        'blackrock-totalBalance', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart',
+        'blackrock-totalBalanceTable', 'lido-marketStatsTableBody', 'lido-yieldsTableBody',
+        'lido-analyticsTableBody', 'lido-queuesTableBody',
+        'blackrock-exportBtn', 'lido-exportBtn'
     ];
     elements.forEach(id => {
         console.log(`[Renderer] ${id} exists: ${!!document.getElementById(id)}`);
@@ -19,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDate = new Date(today - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     console.log(`[Renderer] Initial date range: start=${startDate}, end=${endDate}`);
 
-    ['startDate', 'endDate', 'blackrock-startDate', 'blackrock-endDate'].forEach(id => {
+    ['startDate', 'endDate', 'blackrock-startDate', 'blackrock-endDate', 'lido-startDate', 'lido-endDate'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.value = id.includes('start') ? startDate : endDate;
@@ -87,15 +90,46 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Renderer] blackrock-refreshBtn not found');
     }
 
-    // CSV export button
-    const exportBtn = document.getElementById('blackrock-exportBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
-            console.log('[Renderer] CSV export button clicked');
-            exportToCSV();
+    // BlackRock CSV export button
+    const blackrockExportBtn = document.getElementById('blackrock-exportBtn');
+    if (blackrockExportBtn) {
+        blackrockExportBtn.addEventListener('click', () => {
+            console.log('[Renderer] BlackRock CSV export button clicked');
+            exportBlackRockToCSV();
         });
     } else {
         console.error('[Renderer] blackrock-exportBtn not found');
+    }
+
+    // Lido refresh button
+    const lidoRefreshBtn = document.getElementById('lido-refreshBtn');
+    if (lidoRefreshBtn) {
+        lidoRefreshBtn.addEventListener('click', () => {
+            console.log('[Renderer] Lido refresh button clicked');
+            const startDateInput = document.getElementById('lido-startDate')?.value;
+            const endDateInput = document.getElementById('lido-endDate')?.value;
+            if (startDateInput && endDateInput && validateDates(startDateInput, endDateInput)) {
+                console.log(`[Renderer] Refreshing lido data with start=${startDateInput}, end=${endDateInput}`);
+                loadSectionData('lido', startDateInput, endDateInput);
+            } else {
+                console.error('[Renderer] Invalid date range for lido refresh');
+                const status = document.getElementById('lido-status');
+                if (status) status.innerHTML = 'Error: Select valid dates (not future and start ≤ end)';
+            }
+        });
+    } else {
+        console.error('[Renderer] lido-refreshBtn not found');
+    }
+
+    // Lido CSV export button
+    const lidoExportBtn = document.getElementById('lido-exportBtn');
+    if (lidoExportBtn) {
+        lidoExportBtn.addEventListener('click', () => {
+            console.log('[Renderer] Lido CSV export button clicked');
+            exportLidoToCSV();
+        });
+    } else {
+        console.error('[Renderer] lido-exportBtn not found');
     }
 
     // Handle chart resizing
@@ -103,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            const plotlyCharts = ['priceTrendChart', 'feesChart', 'btcBalanceChart', 'ethBalanceChart'];
+            const plotlyCharts = ['priceTrendChart', 'feesChart', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart'];
             plotlyCharts.forEach(id => {
                 const chart = document.getElementById(id);
                 if (chart && chart.data) {
@@ -130,10 +164,10 @@ function validateDates(startDate, endDate) {
     return true;
 }
 
-function exportToCSV() {
+function exportBlackRockToCSV() {
     const data = window.blackrockData;
     if (!data) {
-        console.error('[Renderer] No data to export');
+        console.error('[Renderer] No BlackRock data to export');
         return;
     }
 
@@ -161,7 +195,37 @@ function exportToCSV() {
     a.download = `blackrock_balances_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    console.log('[Renderer] Data exported to CSV');
+    console.log('[Renderer] BlackRock data exported to CSV');
+}
+
+function exportLidoToCSV() {
+    const data = window.lidoData;
+    if (!data) {
+        console.error('[Renderer] No Lido data to export');
+        return;
+    }
+
+    const csvRows = [];
+    csvRows.push('Week End,Total ETH Deposited,ETH Staked,ETH Unstaked,Staking Rewards');
+    data.charts.forEach(chart => {
+        csvRows.push([
+            chart.week_end,
+            chart.total_eth_deposited.toFixed(2),
+            chart.eth_staked.toFixed(2),
+            chart.eth_unstaked.toFixed(2),
+            chart.staking_rewards.toFixed(2)
+        ].join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lido_data_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    console.log('[Renderer] Lido data exported to CSV');
 }
 
 async function loadSectionData(section, startDate, endDate) {
@@ -549,6 +613,122 @@ async function loadSectionData(section, startDate, endDate) {
                 console.log('[Renderer] No ETH balance data');
                 if (ethBalanceChartError) ethBalanceChartError.innerHTML = 'No ETH balance data available';
                 if (ethBalanceChart) Plotly.purge(ethBalanceChart);
+            }
+        } else if (section === 'lido') {
+            const marketStatsTable = document.getElementById('lido-marketStatsTableBody');
+            const yieldsTable = document.getElementById('lido-yieldsTableBody');
+            const analyticsTable = document.getElementById('lido-analyticsTableBody');
+            const queuesTable = document.getElementById('lido-queuesTableBody');
+            const ethStakedChart = document.getElementById('lido-ethStakedChart');
+            const ethStakedChartError = document.getElementById('lido-ethStakedChartError');
+
+            console.log(`[Renderer] Lido DOM elements:`, {
+                marketStatsTable: !!marketStatsTable,
+                yieldsTable: !!yieldsTable,
+                analyticsTable: !!analyticsTable,
+                queuesTable: !!queuesTable,
+                ethStakedChart: !!ethStakedChart,
+                ethStakedChartError: !!ethStakedChartError
+            });
+
+            if (ethStakedChartError) ethStakedChartError.innerHTML = '';
+
+            window.lidoData = data;
+
+            if (marketStatsTable && data.markets?.stETH) {
+                console.log('[Renderer] Updating Lido market stats table');
+                marketStatsTable.innerHTML = '';
+                const metrics = [
+                    { key: 'total_eth_deposited', label: 'Total ETH Deposited', format: v => `${v.toFixed(2)} ETH` },
+                    { key: 'eth_staked', label: 'ETH Staked', format: v => `${v.toFixed(2)} ETH` },
+                    { key: 'eth_unstaked', label: 'ETH Unstaked', format: v => `${v.toFixed(2)} ETH` },
+                    { key: 'staking_rewards', label: 'Staking Rewards', format: v => `${v.toFixed(2)} ETH` }
+                ];
+                metrics.forEach(metric => {
+                    if (data.markets.stETH[metric.key] !== undefined) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${metric.label}</td><td>${metric.format(data.markets.stETH[metric.key])}</td>`;
+                        marketStatsTable.appendChild(row);
+                        console.log(`[Renderer] Added row for ${metric.label}`);
+                    }
+                });
+            }
+
+            if (yieldsTable && data.yields) {
+                console.log('[Renderer] Updating Lido yields table');
+                yieldsTable.innerHTML = '';
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>Average Rewards</td><td>${data.yields.avg_rewards.toFixed(2)}%</td>`;
+                yieldsTable.appendChild(row);
+                console.log('[Renderer] Added row for Average Rewards');
+            }
+
+            if (analyticsTable && data.analytics) {
+                console.log('[Renderer] Updating Lido analytics table');
+                analyticsTable.innerHTML = '';
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>Staking Ratio</td><td>${(data.analytics.staking_ratio * 100).toFixed(2)}%</td>`;
+                analyticsTable.appendChild(row);
+                console.log(`[Renderer] Added row for Staking Ratio`);
+            }
+
+            if (queuesTable && data.analytics?.queues) {
+                console.log('[Renderer] Updating Lido queues table');
+                queuesTable.innerHTML = '';
+                data.analytics.queues.forEach(queue => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${queue.queue_type.charAt(0).toUpperCase() + queue.queue_type.slice(1)}</td>
+                        <td>${queue.eth_amount.toFixed(2)} ETH</td>
+                        <td>${(queue.avg_wait_time / (24 * 60 * 60)).toFixed(2)} days</td>
+                    `;
+                    queuesTable.appendChild(row);
+                    console.log(`[Renderer] Added row for ${queue.queue_type} queue`);
+                });
+            }
+
+            if (ethStakedChart && data.charts?.length > 0) {
+                console.log('[Renderer] Updating Lido ETH staked chart');
+                Plotly.purge(ethStakedChart);
+                const trace = {
+                    x: data.charts.map(item => item.week_end),
+                    y: data.charts.map(item => item.eth_staked),
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'ETH Staked',
+                    line: { color: '#28a745', width: 2 },
+                    marker: { size: 8, color: '#28a745', symbol: 'circle' },
+                    text: data.charts.map(item => `${item.eth_staked.toFixed(2)} ETH`),
+                    hovertemplate: '%{text}<br>Date: %{x}<extra></extra>'
+                };
+                Plotly.newPlot(ethStakedChart, [trace], {
+                    title: {
+                        text: 'Lido ETH Staked Over Time',
+                        font: { family: 'Arial, sans-serif', size: 18, color: '#ffffff' }
+                    },
+                    xaxis: {
+                        title: { text: 'Week Ending', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333',
+                        range: [startDate, endDate]
+                    },
+                    yaxis: {
+                        title: { text: 'ETH Staked', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333',
+                        tickformat: ',.2f'
+                    },
+                    plot_bgcolor: '#1e1e1e',
+                    paper_bgcolor: '#1e1e1e',
+                    margin: { t: 50, b: 50, l: 50, r: 50 },
+                    autosize: true
+                }, {
+                    responsive: true
+                });
+            } else {
+                console.log('[Renderer] No ETH staked chart data');
+                if (ethStakedChartError) ethStakedChartError.innerHTML = 'No historical ETH staked data available';
+                if (ethStakedChart) Plotly.purge(ethStakedChart);
             }
         }
     } catch (err) {
