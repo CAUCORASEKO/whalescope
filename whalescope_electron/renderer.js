@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'blackrock-totalBalance', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart',
         'blackrock-totalBalanceTable', 'lido-marketStatsTableBody', 'lido-yieldsTableBody',
         'lido-analyticsTableBody', 'lido-queuesTableBody',
-        'blackrock-exportBtn', 'lido-exportBtn'
+        'exportCsvBtn', 'blackrock-exportBtn', 'lido-exportBtn', // Added Bitcoin CSV button
+        'exportPdfBtn', 'blackrock-exportPdfBtn', 'lido-exportPdfBtn' // Added PDF buttons
     ];
     elements.forEach(id => {
         console.log(`[Renderer] ${id} exists: ${!!document.getElementById(id)}`);
@@ -70,6 +71,28 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Renderer] refreshBtn not found');
     }
 
+    // Bitcoin CSV export button
+    const bitcoinCsvBtn = document.getElementById('exportCsvBtn');
+    if (bitcoinCsvBtn) {
+        bitcoinCsvBtn.addEventListener('click', () => {
+            console.log('[Renderer] Bitcoin CSV export button clicked');
+            exportBitcoinToCSV();
+        });
+    } else {
+        console.error('[Renderer] exportCsvBtn not found');
+    }
+
+    // Bitcoin PDF export button
+    const bitcoinPdfBtn = document.getElementById('exportPdfBtn');
+    if (bitcoinPdfBtn) {
+        bitcoinPdfBtn.addEventListener('click', () => {
+            console.log('[Renderer] Bitcoin PDF export button clicked');
+            exportBitcoinToPDF();
+        });
+    } else {
+        console.error('[Renderer] exportPdfBtn not found');
+    }
+
     // BlackRock refresh button
     const blackrockRefreshBtn = document.getElementById('blackrock-refreshBtn');
     if (blackrockRefreshBtn) {
@@ -99,6 +122,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error('[Renderer] blackrock-exportBtn not found');
+    }
+
+    // BlackRock PDF export button
+    const blackrockPdfBtn = document.getElementById('blackrock-exportPdfBtn');
+    if (blackrockPdfBtn) {
+        blackrockPdfBtn.addEventListener('click', () => {
+            console.log('[Renderer] BlackRock PDF export button clicked');
+            exportBlackRockToPDF();
+        });
+    } else {
+        console.error('[Renderer] blackrock-exportPdfBtn not found');
     }
 
     // Lido refresh button
@@ -132,6 +166,17 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Renderer] lido-exportBtn not found');
     }
 
+    // Lido PDF export button
+    const lidoPdfBtn = document.getElementById('lido-exportPdfBtn');
+    if (lidoPdfBtn) {
+        lidoPdfBtn.addEventListener('click', () => {
+            console.log('[Renderer] Lido PDF export button clicked');
+            exportLidoToPDF();
+        });
+    } else {
+        console.error('[Renderer] lido-exportPdfBtn not found');
+    }
+
     // Handle chart resizing
     let resizeTimeout;
     window.addEventListener('resize', () => {
@@ -149,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Existing validateDates function (unchanged)
 function validateDates(startDate, endDate) {
     const today = new Date().setHours(0, 0, 0, 0);
     const start = new Date(startDate).setHours(0, 0, 0, 0);
@@ -164,16 +210,86 @@ function validateDates(startDate, endDate) {
     return true;
 }
 
+// New Bitcoin CSV export function
+function exportBitcoinToCSV() {
+    const data = window.bitcoinData;
+    if (!data || !data.price_history) {
+        console.error('[Renderer] No Bitcoin data to export');
+        document.getElementById('bitcoin-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    const csvRows = [];
+    csvRows.push('Date,Open,High,Low,Close,Volume,Market Cap');
+    data.price_history.dates.forEach((date, index) => {
+        csvRows.push([
+            date,
+            data.price_history.open[index].toFixed(2),
+            data.price_history.high[index].toFixed(2),
+            data.price_history.low[index].toFixed(2),
+            data.price_history.close[index].toFixed(2),
+            (data.markets?.volume_24h || 0).toFixed(2), // Adjust based on actual data
+            (data.markets?.market_cap || 0).toFixed(2)
+        ].join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bitcoin_data_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    console.log('[Renderer] Bitcoin data exported to CSV');
+    document.getElementById('bitcoin-status').innerHTML = 'CSV exported successfully';
+}
+
+// New Bitcoin PDF export function
+function exportBitcoinToPDF() {
+    const data = window.bitcoinData;
+    if (!data || !data.price_history) {
+        console.error('[Renderer] No Bitcoin data to export');
+        document.getElementById('bitcoin-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text('Bitcoin Data', 10, 10);
+        let y = 20;
+        doc.text('Date | Open | High | Low | Close | Volume | Market Cap', 10, y);
+        y += 10;
+        data.price_history.dates.forEach((date, index) => {
+            doc.text(
+                `${date} | ${data.price_history.open[index].toFixed(2)} | ${data.price_history.high[index].toFixed(2)} | ` +
+                `${data.price_history.low[index].toFixed(2)} | ${data.price_history.close[index].toFixed(2)} | ` +
+                `${(data.markets?.volume_24h || 0).toFixed(2)} | ${(data.markets?.market_cap || 0).toFixed(2)}`,
+                10, y
+            );
+            y += 10;
+        });
+        doc.save(`bitcoin_data_${new Date().toISOString().split('T')[0]}.pdf`);
+        console.log('[Renderer] Bitcoin data exported to PDF');
+        document.getElementById('bitcoin-status').innerHTML = 'PDF exported successfully';
+    } catch (error) {
+        console.error('[Renderer] Error exporting Bitcoin PDF:', error);
+        document.getElementById('bitcoin-status').innerHTML = `Error exporting PDF: ${error.message}`;
+    }
+}
+
+// Existing BlackRock CSV export function (unchanged)
 function exportBlackRockToCSV() {
     const data = window.blackrockData;
     if (!data) {
         console.error('[Renderer] No BlackRock data to export');
+        document.getElementById('blackrock-status').innerHTML = 'Error: No data available for export';
         return;
     }
 
     const csvRows = [];
     csvRows.push('Week End,Total Balance (USD),BTC Balance (USD),BTC Balance (BTC),ETH Balance (USD),ETH Balance (ETH)');
-
     data.historical_total_balance.forEach((total, index) => {
         const btc = data.historical_balances.BTC[index] || {};
         const eth = data.historical_balances.ETH[index] || {};
@@ -196,12 +312,50 @@ function exportBlackRockToCSV() {
     a.click();
     window.URL.revokeObjectURL(url);
     console.log('[Renderer] BlackRock data exported to CSV');
+    document.getElementById('blackrock-status').innerHTML = 'CSV exported successfully';
 }
 
+// New BlackRock PDF export function
+function exportBlackRockToPDF() {
+    const data = window.blackrockData;
+    if (!data || !data.historical_total_balance) {
+        console.error('[Renderer] No BlackRock data to export');
+        document.getElementById('blackrock-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text('BlackRock Data', 10, 10);
+        let y = 20;
+        doc.text('Week End | Total Balance (USD) | BTC Balance (USD) | BTC Balance (BTC) | ETH Balance (USD) | ETH Balance (ETH)', 10, y);
+        y += 10;
+        data.historical_total_balance.forEach((total, index) => {
+            const btc = data.historical_balances.BTC[index] || {};
+            const eth = data.historical_balances.ETH[index] || {};
+            doc.text(
+                `${total.week_end} | ${total.total_balance_usd.toFixed(2)} | ${(btc.balance_usd || 0).toFixed(2)} | ` +
+                `${(btc.balance || 0).toFixed(8)} | ${(eth.balance_usd || 0).toFixed(2)} | ${(eth.balance || 0).toFixed(8)}`,
+                10, y
+            );
+            y += 10;
+        });
+        doc.save(`blackrock_data_${new Date().toISOString().split('T')[0]}.pdf`);
+        console.log('[Renderer] BlackRock data exported to PDF');
+        document.getElementById('blackrock-status').innerHTML = 'PDF exported successfully';
+    } catch (error) {
+        console.error('[Renderer] Error exporting BlackRock PDF:', error);
+        document.getElementById('blackrock-status').innerHTML = `Error exporting PDF: ${error.message}`;
+    }
+}
+
+// Existing Lido CSV export function (unchanged)
 function exportLidoToCSV() {
     const data = window.lidoData;
     if (!data) {
         console.error('[Renderer] No Lido data to export');
+        document.getElementById('lido-status').innerHTML = 'Error: No data available for export';
         return;
     }
 
@@ -226,8 +380,43 @@ function exportLidoToCSV() {
     a.click();
     window.URL.revokeObjectURL(url);
     console.log('[Renderer] Lido data exported to CSV');
+    document.getElementById('lido-status').innerHTML = 'CSV exported successfully';
 }
 
+// New Lido PDF export function
+function exportLidoToPDF() {
+    const data = window.lidoData;
+    if (!data || !data.charts) {
+        console.error('[Renderer] No Lido data to export');
+        document.getElementById('lido-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text('Lido Staking Data', 10, 10);
+        let y = 20;
+        doc.text('Week End | Total ETH Deposited | ETH Staked | ETH Unstaked | Staking Rewards', 10, y);
+        y += 10;
+        data.charts.forEach(chart => {
+            doc.text(
+                `${chart.week_end} | ${chart.total_eth_deposited.toFixed(2)} | ${chart.eth_staked.toFixed(2)} | ` +
+                `${chart.eth_unstaked.toFixed(2)} | ${chart.staking_rewards.toFixed(2)}`,
+                10, y
+            );
+            y += 10;
+        });
+        doc.save(`lido_data_${new Date().toISOString().split('T')[0]}.pdf`);
+        console.log('[Renderer] Lido data exported to PDF');
+        document.getElementById('lido-status').innerHTML = 'PDF exported successfully';
+    } catch (error) {
+        console.error('[Renderer] Error exporting Lido PDF:', error);
+        document.getElementById('lido-status').innerHTML = `Error exporting PDF: ${error.message}`;
+    }
+}
+
+// Existing loadSectionData function (unchanged)
 async function loadSectionData(section, startDate, endDate) {
     console.log(`[Renderer] loadSectionData called for ${section} with start=${startDate}, end=${endDate}`);
     const status = document.getElementById(`${section}-status`);
@@ -255,6 +444,7 @@ async function loadSectionData(section, startDate, endDate) {
         if (loading) loading.style.display = 'none';
 
         if (section === 'bitcoin') {
+            window.bitcoinData = data; // Store data globally
             const table = document.getElementById('marketStatsTableBody');
             const lastUpdated = document.getElementById('lastUpdated');
             const performanceTable = document.getElementById('performanceTableBody');
@@ -669,7 +859,7 @@ async function loadSectionData(section, startDate, endDate) {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td>Staking Ratio</td><td>${(data.analytics.staking_ratio * 100).toFixed(2)}%</td>`;
                 analyticsTable.appendChild(row);
-                console.log(`[Renderer] Added row for Staking Ratio`);
+                console.log('[Renderer] Added row for Staking Ratio');
             }
 
             if (queuesTable && data.analytics?.queues) {
