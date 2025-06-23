@@ -1,3 +1,5 @@
+# bitcoin.py
+
 import requests
 import sqlite3
 import json
@@ -12,20 +14,27 @@ import hmac
 import urllib.parse
 import pandas as pd
 import sys
+from appdirs import user_log_dir  # Import appdirs for platform-specific log directory
 
-# Set up logging configuration
+# Set up logging configuration to write to a platform-appropriate directory
+# Use appdirs to determine a writable log directory (e.g., ~/Library/Logs/WhaleScope on macOS)
+log_dir = user_log_dir("WhaleScope", "Cauco")  # App name: WhaleScope, author: Cauco
+os.makedirs(log_dir, exist_ok=True)  # Create the log directory if it doesn't exist
+log_file = os.path.join(log_dir, "bitcoin.log")  # Define log file path
+
 try:
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        filename=os.path.join(os.path.dirname(__file__), 'bitcoin.log'),
-        filemode='a'
+        filename=log_file,  # Use platform-specific log file path
+        filemode='a'  # Append mode to avoid overwriting logs
     )
     logger = logging.getLogger(__name__)
     logger.info("Script started successfully")
     logger.info("Logging setup completed")
 except Exception as e:
-    logger.error(f"Error setting up logging: {str(e)}")
+    # Log to stderr if file logging setup fails
+    print(f"Error setting up logging: {str(e)}", file=sys.stderr)
     sys.exit(1)
 
 # Binance API configuration
@@ -197,7 +206,9 @@ def fetch_bitcoin_data(start_date=None, end_date=None):
     # Connect to database with error handling
     try:
         logger.info("Connecting to database...")
-        conn = sqlite3.connect('/Users/mestizo/Desktop/whalescope/WhaleScope/whalescope.db')
+        # Use a relative path to whalescope.db to work in the packaged app
+        db_path = os.path.join(os.path.dirname(__file__), 'whalescope.db')
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         logger.info("Database connected successfully")
     except sqlite3.Error as e:

@@ -1,3 +1,5 @@
+# blackrock.py
+
 import sys
 import json
 import logging
@@ -11,29 +13,30 @@ import warnings
 import os
 import configparser
 from logging.handlers import RotatingFileHandler
+from appdirs import user_log_dir  # Import appdirs for platform-specific log directory
 
-# Leer config.ini
+# Read config.ini
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(os.path.join(os.path.dirname(__file__), 'config.ini'))  # Use relative path to config.ini
 
-# Configuración inicial
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+# Configure logging to write to a platform-appropriate directory
+# Use appdirs to determine a writable log directory (e.g., ~/Library/Logs/WhaleScope on macOS)
+log_dir = user_log_dir("WhaleScope", "Cauco")  # App name: WhaleScope, author: Cauco
+os.makedirs(log_dir, exist_ok=True)  # Create the log directory if it doesn't exist
+log_file = os.path.join(log_dir, "blackrock.log")  # Define log file path
 
-# Configurar logging con rotación de archivos
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        RotatingFileHandler('blackrock.log', maxBytes=1024*1024, backupCount=5),
-        logging.StreamHandler(sys.stderr)
+        RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=5),  # Write to platform-specific log file
+        logging.StreamHandler(sys.stderr)  # Keep stderr handler for debugging
     ]
 )
 
-# Constantes (leídas desde config.ini)
+# Constants (read from config.ini)
 try:
-    DB_PATH = config['DEFAULT']['DB_PATH']
+    DB_PATH = os.path.join(os.path.dirname(__file__), 'whalescope.db')  # Use relative path to whalescope.db
     ARKHAM_API_KEY = config['API_KEYS']['ARKHAM_API_KEY']
 except KeyError as e:
     logging.error(f"Error: Missing key in config.ini: {e}")
@@ -69,7 +72,7 @@ def ensure_historical_wallet_data(api_key, entity_id, start_date, end_date, hold
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
 
-        # Limpiar entradas antiguas
+        # Clear old entries
         cursor.execute('''
             DELETE FROM arkham_wallets 
             WHERE entity_id = ? 
@@ -78,14 +81,14 @@ def ensure_historical_wallet_data(api_key, entity_id, start_date, end_date, hold
         conn.commit()
         logging.info(f"Cleared existing wallet entries for {entity_id} from {start_date} to {end_date}")
 
-        # Poblar con holdings_by_chain
+        # Populate with holdings_by_chain
         logging.info(f"Populating historical wallet data for {entity_id}")
         balances = [
             {'symbol': 'BTC', 'balance': holdings_by_chain['BTC']['balance'], 'usd': holdings_by_chain['BTC']['balance_usd']},
             {'symbol': 'ETH', 'balance': holdings_by_chain['ETH']['balance'], 'usd': holdings_by_chain['ETH']['balance_usd']},
             {'symbol': 'USDC', 'balance': holdings_by_chain['USDC']['balance'], 'usd': holdings_by_chain['USDC']['balance_usd']}
         ]
-        # Validar API balances
+        # Validate API balances
         api_balances = fetch_arkham_balances(api_key, entity_id)
         if api_balances:
             for balance in api_balances:
@@ -207,11 +210,6 @@ def fetch_market_stats(ticker='IBIT', end_date=None):
         logging.info(f"Fetching market stats for {ticker} with end_date {end_date}")
         stock = yf.Ticker(ticker)
         info = stock.info
-        # Optional: Hardcode $418.18 for June 5, 2025
-        # if end_date == '2025-06-05':
-        #     price = 418.18
-        #     logging.debug(f"Using hardcoded price for {end_date}: ${price}")
-        # else:
         price = info.get('regularMarketPrice', info.get('previousClose', 0.0))
         logging.debug(f"Using yfinance price for {end_date}: ${price}")
         history = stock.history(period="30d")
@@ -546,7 +544,7 @@ def main(start_date=None, end_date=None):
         logger.info("Processing transactions")
         transactions = process_transactions(raw_transactions, historical_prices)
         logger.info("Fetching exchange usage")
-        exchange_usage = fetch_arkham_exchange_usage(ARKHAM_API_KEY, entity_id, start_date, end_date)
+        exchange_usage = fetch_arkham_exchange_usage(ARKHAM_API_KEY, entity_id, start_date, end_date)  
         logger.info("Fetching historical balances")
         historical_balances = fetch_historical_balances(entity_id, start_date, end_date)
         logger.info("Fetching historical total balance")
@@ -554,6 +552,12 @@ def main(start_date=None, end_date=None):
         logger.info("Calculating holdings by chain")
         holdings_by_chain['BTC']['price'] = historical_prices['BTC'].get(end_date, 0.0)
         holdings_by_chain['ETH']['price'] = historical_prices['ETH'].get(end_date, 0.0)
+        
+        # Write output to a writable directory
+        output_dir = user_log_dir("WhaleScope", "Cauco")  # Use same directory as logs for consistency
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, "blackrock_output.json")
+        
         output_data = {
             "type": "result",
             "profile": {
@@ -575,11 +579,11 @@ def main(start_date=None, end_date=None):
         print(json_output)
         sys.stdout.flush()
         try:
-            with open('blackrock_output.json', 'w') as f:
+            with open(output_file, 'w') as f:
                 json.dump(output_data, f, indent=2)
-            logger.info("Data saved to blackrock_output.json")
+            logger.info(f"Data saved to {output_file}")
         except Exception as e:
-            logger.error(f"Error: Failed to save blackrock_output.json: {e}")
+            logger.error(f"Error: Failed to save {output_file}: {e}")
         return output_data
     except Exception as e:
         error = {"error": f"Failed to fetch BlackRock data: {str(e)}"}

@@ -1,9 +1,14 @@
 {
   "name": "whalescope_electron",
   "version": "1.0.0",
+  "description": "WhaleScope Electron App for Cryptocurrency Analysis",
   "main": "main.js",
+  "type": "commonjs",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --mac --win",
+    "build:mac": "electron-builder --mac", 
+    "build:win": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -13,12 +18,111 @@
   ],
   "author": "Cauco",
   "license": "ISC",
-  "description": "WhaleScope Electron App for Cryptocurrency Analysis",
-  "devDependencies": {
-    "electron": "^31.0.0"
+  "build": {
+    "appId": "com.whalescope.app",
+    "productName": "WhaleScope",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/sqlite3/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/",
+      "!cache/",
+      "!logs/",
+      "!bitcoin.log",
+      "!blackrock.log*",
+      "!whalescope.log",
+      "!bitinfocharts.html"
+    ],
+    "extraResources": [
+      {
+        "from": "../venv/",
+        "to": "venv/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../whalescope.py",
+        "to": "whalescope.py"
+      },
+      {
+        "from": "../bitcoin.py",
+        "to": "bitcoin.py"
+      },
+      {
+        "from": "../blackrock.py",
+        "to": "blackrock.py"
+      },
+      {
+        "from": "../lido_staking.py",
+        "to": "lido_staking.py"
+      },
+      {
+        "from": "../whalescope.db",
+        "to": "whalescope.db"
+      },
+      {
+        "from": "../config.ini",
+        "to": "config.ini"
+      },
+      {
+        "from": "../.env",
+        "to": ".env"
+      },
+      {
+        "from": "../requirements.txt",
+        "to": "requirements.txt"
+      },
+      {
+        "from": "./assets/",
+        "to": "assets/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "./setup.bat",
+        "to": "setup.bat"
+      },
+      {
+        "from": "./setup.sh",
+        "to": "setup.sh"
+      },
+      {
+        "from": "./.env.example",
+        "to": ".env.example"
+      },
+      {
+        "from": "node_modules/jspdf/dist/jspdf.umd.min.js",
+        "to": "assets/jspdf.umd.min.js"
+      },
+      {
+        "from": "node_modules/chart.js/dist/chart.umd.min.js",
+        "to": "assets/chart.min.js"
+      },
+      {
+        "from": "node_modules/plotly.js/dist/plotly.min.js",
+        "to": "assets/plotly-2.35.2.min.js"
+      }
+    ]
   },
   "dependencies": {
     "chart.js": "^4.4.9",
+    "jspdf": "^3.0.1",
+    "plotly.js": "^2.35.2",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^25.9.8",
+    "electron-builder": "^26.0.12"
   }
 }

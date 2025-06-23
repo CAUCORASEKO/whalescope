@@ -1,3 +1,5 @@
+# lido_staking.py
+
 import requests
 import sqlite3
 from datetime import datetime, timedelta
@@ -8,6 +10,24 @@ import sys
 import argparse
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from appdirs import user_log_dir  # Import appdirs for platform-specific log directory
+import logging  # Import logging module
+
+# Configure logging to write to a platform-appropriate directory
+# Use appdirs to determine a writable log directory (e.g., ~/Library/Logs/WhaleScope on macOS)
+log_dir = user_log_dir("WhaleScope", "Cauco")  # App name: WhaleScope, author: Cauco
+os.makedirs(log_dir, exist_ok=True)  # Create the log directory if it doesn't exist
+log_file = os.path.join(log_dir, "lido_staking.log")  # Define log file path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),  # Write to platform-specific log file
+        logging.StreamHandler(sys.stderr)  # Keep stderr for compatibility with existing prints
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # API Keys
 CMC_API_KEY = "60c68e38-60f8-4d1e-87b1-33d8f6b6e0f2"
@@ -31,7 +51,7 @@ current_date_str = current_date.strftime('%Y-%m-%d')
 
 # SQLite database
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "whalescope.db")
+DB_PATH = os.path.join(BASE_DIR, "whalescope.db")  # Use relative path to whalescope.db
 conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
@@ -51,7 +71,7 @@ retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[429, 500, 502, 50
 session.mount('https://', HTTPAdapter(max_retries=retries))
 
 def fetch_etherscan_data(action, symbol=None, retries=3):
-    print(f"Starting fetch_etherscan_data for {action}, symbol: {symbol}", file=sys.stderr)
+    logger.info(f"Starting fetch_etherscan_data for {action}, symbol: {symbol}")
     params = {
         "module": "stats" if action == "ethsupply" else "account",
         "action": "balance" if action == "ethbalance" else action,
@@ -68,17 +88,17 @@ def fetch_etherscan_data(action, symbol=None, retries=3):
             if data["status"] != "1":
                 raise ValueError(f"Etherscan error: {data.get('message', 'Unknown error')}")
             result = int(data["result"]) / 10**18
-            print(f"Etherscan {action} for {symbol or 'ETH'}: {result} ETH", file=sys.stderr)
+            logger.info(f"Etherscan {action} for {symbol or 'ETH'}: {result} ETH")
             return result
         except Exception as e:
-            print(f"Attempt {attempt+1}/{retries} failed for Etherscan {action}: {e}", file=sys.stderr)
+            logger.error(f"Attempt {attempt+1}/{retries} failed for Etherscan {action}: {e}")
             if attempt == retries - 1:
-                print(f"Failed to fetch Etherscan data for {action} after {retries} attempts.", file=sys.stderr)
+                logger.error(f"Failed to fetch Etherscan data for {action} after {retries} attempts.")
                 return None
             time.sleep(0.5 * (attempt + 1))
 
 def fetch_cmc_data(cmc_id, symbol):
-    print(f"Starting fetch_cmc_data for {symbol} (ID: {cmc_id})", file=sys.stderr)
+    logger.info(f"Fetching data for {symbol} (ID: {cmc_id}) from CoinMarketCap")
     headers = {
         "X-CMC_PRO_API_KEY": CMC_API_KEY,
         "Accept": "application/json"
@@ -94,7 +114,7 @@ def fetch_cmc_data(cmc_id, symbol):
             raise ValueError(f"HTTP 400: Invalid request for {symbol} (ID: {cmc_id})")
         response.raise_for_status()
         data = response.json()
-        print(f"CoinMarketCap response for {symbol} (ID: {cmc_id}): {json.dumps(data, indent=2)}", file=sys.stderr)
+        logger.debug(f"CoinMarketCap response for {symbol}: {json.dumps(data, indent=2)}")
         if "data" not in data or str(cmc_id) not in data["data"]:
             raise ValueError(f"Invalid CoinMarketCap response for {symbol}: missing data")
         adapted_data = {
@@ -115,32 +135,32 @@ def fetch_cmc_data(cmc_id, symbol):
             raise ValueError(f"Invalid CoinMarketCap price for {symbol}")
         return adapted_data
     except Exception as e:
-        print(f"Error fetching CoinMarketCap data for {symbol} (ID: {cmc_id}): {e}", file=sys.stderr)
+        logger.error(f"Error fetching CoinMarketCap data for {symbol} (ID: {cmc_id}): {e}")
         return None
 
 def fetch_token_data(symbol):
-    print(f"Starting fetch_token_data for {symbol}", file=sys.stderr)
+    logger.info(f"Fetching token data for {symbol}")
     cmc_id = IDS[symbol]["cmc"]
     data = fetch_cmc_data(cmc_id, symbol)
     if data and symbol == "ETH":
         eth_supply = fetch_etherscan_data("ethsupply")
         if eth_supply and eth_supply > 0:
             data["data"][str(cmc_id)]["circulating_supply"] = eth_supply
-            print(f"Using Etherscan supply for ETH: {eth_supply}", file=sys.stderr)
+            logger.info(f"Using Etherscan supply for ETH: {eth_supply}")
     return data
 
 def fetch_lido_data(week_end=None):
-    print(f"=== Fetching Lido Data for week ending {week_end or 'current'} ===", file=sys.stderr)
+    logger.info(f"Fetching Lido Data for week ending {week_end or 'current'}")
     try:
         steth_data = fetch_token_data("STETH")
-        print("STETH data fetched:", steth_data is not None, file=sys.stderr)
+        logger.debug("STETH data fetched: %s", steth_data is not None)
         wsteth_data = fetch_token_data("WSTETH")
-        print("WSTETH data fetched:", wsteth_data is not None, file=sys.stderr)
+        logger.debug("WSTETH data fetched: %s", wsteth_data is not None)
         eth_data = fetch_token_data("ETH")
-        print("ETH data fetched:", eth_data is not None, file=sys.stderr)
+        logger.debug("ETH data fetched: %s", eth_data is not None)
 
         if not (steth_data and wsteth_data and eth_data):
-            print("Failed to fetch data for STETH, WSTETH, or ETH.", file=sys.stderr)
+            logger.error("Failed to fetch data for STETH, WSTETH, or ETH.")
             return None
 
         steth_info = steth_data["data"][str(IDS["STETH"]["cmc"])]
@@ -155,14 +175,14 @@ def fetch_lido_data(week_end=None):
         eth_price_usd = eth_info["quote"]["USD"]["price"]
 
         if steth_price_usd <= 0:
-            print(f"Error: Invalid STETH price ({steth_price_usd}).", file=sys.stderr)
+            logger.error(f"Invalid STETH price ({steth_price_usd}).")
             return None
         wsteth_to_eth_ratio = wsteth_price_usd / steth_price_usd
         eth_staked = steth_supply + (wsteth_supply * wsteth_to_eth_ratio)
 
         eth_unstaked = fetch_etherscan_data("ethbalance", "LIDO")
         if not eth_unstaked or eth_unstaked <= 10000:
-            print(f"Invalid or low eth_unstaked: {eth_unstaked}. Using default.", file=sys.stderr)
+            logger.warning(f"Invalid or low eth_unstaked: {eth_unstaked}. Using default.")
             eth_unstaked = 87479
 
         total_eth_deposited = eth_staked + eth_unstaked
@@ -172,11 +192,11 @@ def fetch_lido_data(week_end=None):
             response = session.get(lido_api_url)
             response.raise_for_status()
             lido_response = response.json()
-            print(f"Lido API raw response (fetch_lido_data): {json.dumps(lido_response, indent=2)}", file=sys.stderr)
+            logger.debug(f"Lido API raw response: {json.dumps(lido_response, indent=2)}")
             apr = lido_response.get("data", {}).get("apr", 3.5) / 100
-            print(f"APR fetched from Lido: {apr*100}%", file=sys.stderr)
+            logger.info(f"APR fetched from Lido: {apr*100}%")
         except Exception as e:
-            print(f"Failed to fetch APR from Lido API: {e}. Using default.", file=sys.stderr)
+            logger.warning(f"Failed to fetch APR from Lido API: {e}. Using default.")
             apr = 3.5 / 100
 
         staking_rewards = eth_staked * apr
@@ -190,14 +210,14 @@ def fetch_lido_data(week_end=None):
             "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "week_end": week_end or current_date_str
         }
-        print(f"Lido data fetched: {json.dumps(data, indent=2)}", file=sys.stderr)
+        logger.info(f"Lido data fetched: {json.dumps(data, indent=2)}")
         return data
     except Exception as e:
-        print(f"Error fetching Lido data: {e}", file=sys.stderr)
+        logger.error(f"Error fetching Lido data: {e}")
         return None
 
 def fetch_staking_queues():
-    print("=== Fetching Stake/Unstake Queue Data ===", file=sys.stderr)
+    logger.info("Fetching Stake/Unstake Queue Data")
     try:
         beaconchain_url = "https://beaconcha.in/api/v1/validators/queue"
         response = session.get(beaconchain_url)
@@ -216,30 +236,30 @@ def fetch_staking_queues():
             {"queue_type": "stake", "eth_amount": float(eth_in_stake_queue), "avg_wait_time": float(avg_wait_time_stake)},
             {"queue_type": "unstake", "eth_amount": float(eth_in_unstake_queue), "avg_wait_time": float(avg_wait_time_unstake)}
         ]
-        print(f"Stake/Unstake queues: {json.dumps(queues, indent=2)}", file=sys.stderr)
+        logger.info(f"Stake/Unstake queues: {json.dumps(queues, indent=2)}")
         return queues
     except Exception as e:
-        print(f"Error fetching queue data: {e}", file=sys.stderr)
+        logger.error(f"Error fetching queue data: {e}")
         return []
 
 def fetch_staking_ratio():
-    print("=== Fetching Staking Ratio ===", file=sys.stderr)
+    logger.info("Fetching Staking Ratio")
     try:
         eth_data = fetch_token_data("ETH")
         if not eth_data:
-            print("Failed to fetch ETH data.", file=sys.stderr)
+            logger.error("Failed to fetch ETH data.")
             return None
 
         eth_info = eth_data["data"][str(IDS["ETH"]["cmc"])]
         total_supply = eth_info["circulating_supply"]
         if total_supply <= 0:
-            print(f"Error: Invalid ETH circulating supply ({total_supply}).", file=sys.stderr)
+            logger.error(f"Invalid ETH circulating supply ({total_supply}).")
             return None
 
         steth_data = fetch_token_data("STETH")
         wsteth_data = fetch_token_data("WSTETH")
         if not (steth_data and wsteth_data):
-            print("Failed to fetch stETH/wstETH data.", file=sys.stderr)
+            logger.error("Failed to fetch stETH/wstETH data.")
             return None
 
         steth_info = steth_data["data"][str(IDS["STETH"]["cmc"])]
@@ -250,7 +270,7 @@ def fetch_staking_ratio():
         wsteth_price_usd = wsteth_info["quote"]["USD"]["price"]
 
         if steth_price_usd <= 0:
-            print(f"Error: Invalid STETH price ({steth_price_usd}).", file=sys.stderr)
+            logger.error(f"Invalid STETH price ({steth_price_usd}).")
             return None
         wsteth_to_eth_ratio = wsteth_price_usd / steth_price_usd
         eth_staked_total = steth_supply + (wsteth_supply * wsteth_to_eth_ratio)
@@ -262,11 +282,11 @@ def fetch_staking_ratio():
             response = session.get(lido_api_url)
             response.raise_for_status()
             lido_response = response.json()
-            print(f"Lido API raw response (fetch_staking_ratio): {json.dumps(lido_response, indent=2)}", file=sys.stderr)
+            logger.debug(f"Lido API raw response: {json.dumps(lido_response, indent=2)}")
             avg_rewards = lido_response.get("data", {}).get("apr", 3.5) / 100
-            print(f"APR for staking ratio: {avg_rewards*100}%", file=sys.stderr)
+            logger.info(f"APR for staking ratio: {avg_rewards*100}%")
         except Exception as e:
-            print(f"Failed to fetch APR from Lido API: {e}. Using default.", file=sys.stderr)
+            logger.warning(f"Failed to fetch APR from Lido API: {e}. Using default.")
             avg_rewards = 3.5 / 100
 
         data = {
@@ -275,14 +295,14 @@ def fetch_staking_ratio():
             "avg_rewards": float(avg_rewards),
             "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        print(f"Staking ratio: {json.dumps(data, indent=2)}", file=sys.stderr)
+        logger.info(f"Staking ratio: {json.dumps(data, indent=2)}")
         return data
     except Exception as e:
-        print(f"Error fetching staking ratio: {e}", file=sys.stderr)
+        logger.error(f"Error fetching staking ratio: {e}")
         return None
 
 def save_historical_data(start_date, end_date):
-    print(f"Populating historical Lido data from {start_date} to {end_date}", file=sys.stderr)
+    logger.info(f"Populating historical Lido data from {start_date} to {end_date}")
     try:
         start = datetime.strptime(start_date, '%Y-%m-%d')
         end = datetime.strptime(end_date, '%Y-%m-%d')
@@ -310,11 +330,11 @@ def save_historical_data(start_date, end_date):
         conn.commit()
         return historical_data
     except Exception as e:
-        print(f"Error in save_historical_data: {e}", file=sys.stderr)
+        logger.error(f"Error in save_historical_data: {e}")
         return []
 
 def save_data(start_date=None, end_date=None):
-    print("Starting save_data", file=sys.stderr)
+    logger.info("Starting save_data")
     historical_data = []
     lido_data = None
     queues = []
@@ -326,7 +346,7 @@ def save_data(start_date=None, end_date=None):
         else:
             lido_data = fetch_lido_data()
             if lido_data:
-                print("Saving liquid_staking_pools", file=sys.stderr)
+                logger.info("Saving liquid_staking_pools")
                 cursor.execute("""
                     INSERT OR REPLACE INTO liquid_staking_pools
                     (pool_name, total_eth_deposited, eth_staked, eth_unstaked, staking_rewards, timestamp, week_end)
@@ -337,7 +357,7 @@ def save_data(start_date=None, end_date=None):
 
         queues = fetch_staking_queues()
         if queues:
-            print("Saving eth_staking_queues", file=sys.stderr)
+            logger.info("Saving eth_staking_queues")
             for queue in queues:
                 cursor.execute("""
                     INSERT OR REPLACE INTO eth_staking_queues
@@ -349,14 +369,19 @@ def save_data(start_date=None, end_date=None):
 
         ratio_data = fetch_staking_ratio()
         if ratio_data:
-            print("Saving eth_staking_ratio", file=sys.stderr)
+            logger.info("Saving eth_staking_ratio")
             cursor.execute("""
                 INSERT OR REPLACE INTO eth_staking_ratio
                 (date, staking_ratio, avg_rewards, timestamp)
                 VALUES (?, ?, ?, ?)
-            """, (ratio_data["date"], ratio_data["staking_ratio"], ratio_data["avg_rewards"],
-                  ratio_data["timestamp"]))
+                """, (ratio_data["date"], ratio_data["staking_ratio"], ratio_data["avg_rewards"],
+                      ratio_data["timestamp"]))
             conn.commit()
+
+        # Write output to a writable directory
+        output_dir = user_log_dir("WhaleScope", "Cauco")  # Use same directory as logs
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, "lido_output.json")
 
         output_data = {
             "markets": {
@@ -378,13 +403,13 @@ def save_data(start_date=None, end_date=None):
             "charts": historical_data
         }
 
-        with open(os.path.join(BASE_DIR, "lido_output.json"), "w") as f:
+        with open(output_file, "w") as f:
             json.dump(output_data, f, indent=4)
-        print("Data saved to lido_output.json", file=sys.stderr)
+        logger.info(f"Data saved to {output_file}")
         return output_data
 
     except Exception as e:
-        print(f"Error in save_data: {e}", file=sys.stderr)
+        logger.error(f"Error in save_data: {e}")
         return {
             "markets": {"stETH": {"total_eth_deposited": 0, "eth_staked": 0, "eth_unstaked": 0, "staking_rewards": 0, "last_updated": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}},
             "yields": {"avg_rewards": 3.5},
@@ -403,8 +428,9 @@ if __name__ == "__main__":
         output_data = save_data(start_date=args.start_date, end_date=args.end_date)
         print(json.dumps(output_data, indent=4))
     except Exception as e:
+        logger.error(f"Script failed: {e}")
         print(json.dumps({"error": str(e)}, indent=4), file=sys.stdout)
     finally:
-        print("Closing database connection", file=sys.stderr)
+        logger.info("Closing database connection")
         conn.close()
     sys.stdout.flush()

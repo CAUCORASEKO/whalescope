@@ -1,17 +1,24 @@
+# whalescope.py
+
 import sys
 import subprocess
 import json
 import argparse
 import os
 import logging
-import argparse
+from appdirs import user_log_dir  # Import appdirs to get platform-specific log directory
 
-# Configure logging
+# Configure logging to write to a platform-appropriate directory
+# Use appdirs to determine the correct log directory (e.g., ~/Library/Logs/WhaleScope on macOS)
+log_dir = user_log_dir("WhaleScope", "Cauco")  # App name: WhaleScope, author: Cauco
+os.makedirs(log_dir, exist_ok=True)  # Create the log directory if it doesn't exist
+log_file = os.path.join(log_dir, "whalescope.log")  # Define log file path
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='whalescope.log',
-    filemode='a'
+    filename=log_file,  # Use the platform-specific log file path
+    filemode='a'  # Append mode to avoid overwriting logs
 )
 
 def update_data(mode, start_date=None, end_date=None):
@@ -19,6 +26,7 @@ def update_data(mode, start_date=None, end_date=None):
     logger.info(f"Starting data update for mode '{mode}'")
     
     # Use absolute paths based on script directory
+    # This ensures scripts and output files are found relative to whalescope.py
     base_dir = os.path.dirname(os.path.abspath(__file__))
     scripts = {
         'bitcoin': os.path.join(base_dir, 'bitcoin.py'),
@@ -44,28 +52,31 @@ def update_data(mode, start_date=None, end_date=None):
 
     logger.info(f"Executing {script}")
     try:
+        # Determine the Python executable path
+        # First try the virtual environment's Python, fall back to system Python if needed
         python_command = os.path.join(base_dir, 'venv', 'bin', 'python3')
         if not os.path.exists(python_command):
             python_command = 'python3'
             logger.warning(f"Virtual environment Python not found, using {python_command}")
         
-        # Build command
+        # Build command with optional date arguments
         cmd = [python_command, script]
         if start_date and end_date:
             cmd.extend(['--start-date', start_date, '--end-date', end_date])
         
         logger.info(f"Full command: {' '.join(cmd)}")
         
-        # Execute command with clean environment
+        # Execute the command and capture output
+        # Use a clean environment with unbuffered output for real-time logging
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             check=True,
-            env={**os.environ, "PYTHONUNBUFFERED": "1"}  # Force unbuffered output
+            env={**os.environ, "PYTHONUNBUFFERED": "1"}
         )
         
-        # Log output
+        # Log the script's output
         logger.info(f"Stdout from {script}: {result.stdout}")
         if result.stderr:
             logger.error(f"Stderr from {script}: {result.stderr}")
@@ -78,12 +89,12 @@ def update_data(mode, start_date=None, end_date=None):
                 return {"error": f"Empty stdout from {script}"}
             
             data = json.loads(stdout_clean)
-            # Validate expected keys for Lido
+            # Validate expected keys for Lido mode
             if mode == 'lido' and not all(key in data for key in ['markets', 'yields', 'analytics', 'charts']):
                 logger.error(f"Invalid JSON structure from {script}: missing required keys")
                 return {"error": f"Invalid JSON structure from {script}"}
             
-            # Save to output file
+            # Save parsed data to the output file
             with open(output_file, 'w') as f:
                 json.dump(data, f, indent=4)
             logger.info(f"Data saved to {output_file}")
@@ -101,12 +112,14 @@ def update_data(mode, start_date=None, end_date=None):
         return {"error": f"Unexpected error: {str(e)}"}
 
 if __name__ == "__main__":
+    # Parse command-line arguments
     parser = argparse.ArgumentParser(description="WhaleScope data updater")
     parser.add_argument('mode', choices=['bitcoin', 'blackrock', 'lido', 'all'], help="Mode to run")
     parser.add_argument('--start-date', type=str, help="Start date for data (YYYY-MM-DD)")
     parser.add_argument('--end-date', type=str, help="End date for data (YYYY-MM-DD)")
     args = parser.parse_args()
 
+    # Handle 'all' mode or single mode
     if args.mode == 'all':
         modes = ['bitcoin', 'blackrock', 'lido']
     else:
@@ -117,6 +130,6 @@ if __name__ == "__main__":
         result = update_data(mode, args.start_date, args.end_date)
         results[mode] = result
 
-    # Output JSON to stdout
+    # Output results as JSON to stdout
     print(json.dumps(results[args.mode] if args.mode != 'all' else results, indent=4))
     sys.stdout.flush()
