@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --mac --win",
-    "build:mac": "electron-builder --mac", 
+    "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -44,12 +44,13 @@
       "!bitcoin.log",
       "!blackrock.log*",
       "!whalescope.log",
-      "!bitinfocharts.html"
+      "!bitinfocharts.html",
+      "!venv/"
     ],
     "extraResources": [
       {
-        "from": "../venv/",
-        "to": "venv/",
+        "from": "../python_embed/",
+        "to": "python_embed/",
         "filter": ["**/*"]
       },
       {
@@ -81,25 +82,9 @@
         "to": ".env"
       },
       {
-        "from": "../requirements.txt",
-        "to": "requirements.txt"
-      },
-      {
         "from": "./assets/",
         "to": "assets/",
         "filter": ["**/*"]
-      },
-      {
-        "from": "./setup.bat",
-        "to": "setup.bat"
-      },
-      {
-        "from": "./setup.sh",
-        "to": "setup.sh"
-      },
-      {
-        "from": "./.env.example",
-        "to": ".env.example"
       },
       {
         "from": "node_modules/jspdf/dist/jspdf.umd.min.js",
@@ -111,14 +96,14 @@
       },
       {
         "from": "node_modules/plotly.js/dist/plotly.min.js",
-        "to": "assets/plotly-2.35.2.min.js"
+        "to": "assets/plotly-3.0.0.min.js"
       }
     ]
   },
   "dependencies": {
     "chart.js": "^4.4.9",
     "jspdf": "^3.0.1",
-    "plotly.js": "^2.35.2",
+    "plotly.js": "^3.0.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
