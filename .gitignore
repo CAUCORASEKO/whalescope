@@ -5,6 +5,12 @@ __pycache__/
 *.pyo
 *.pyd
 whalescope.db
+whalescope.db.backup
+python-3.11.9-extracted/
+python_embed/
+python-3.11.9-macos11.pkg
+python3
+python3.11
 
 # Archivos generados
 *.json
@@ -23,6 +29,7 @@ dist/
 
 # Logs
 *.log
+*.log.*
 
 # macOS
 .DS_Store
@@ -35,3 +42,4 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .pypirc
+.fake
