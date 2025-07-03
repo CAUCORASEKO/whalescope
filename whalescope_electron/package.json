@@ -1,3 +1,4 @@
+
 {
   "name": "whalescope_electron",
   "version": "1.0.0",
@@ -5,17 +6,17 @@
   "main": "main.js",
   "type": "commonjs",
   "scripts": {
-    "start": "electron .",
-    "build": "electron-builder --mac --win",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "whalescope",
-    "crypto",
-    "electron"
-  ],
+  "start": "electron .",
+  "dev": "electron .",
+  "clean": "rm -rf dist build",
+  "build": "npm run build-python && electron-builder --mac --win",
+  "build-python": "pip install -r ../requirements.txt --target=../python_embed/lib/python3.11/site-packages/",
+  "build:mac": "npm run build-python && electron-builder --mac",
+  "build:win": "npm run build-python && electron-builder --win",
+  "clean-build": "npm run clean && npm run build"
+},
+
+  "keywords": ["whalescope", "crypto", "electron"],
   "author": "Cauco",
   "license": "ISC",
   "build": {
@@ -24,6 +25,7 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/sqlite3/**/*"
+      
     ],
     "mac": {
       "target": "dmg",
@@ -41,10 +43,7 @@
       "!dist/",
       "!cache/",
       "!logs/",
-      "!bitcoin.log",
-      "!blackrock.log*",
-      "!whalescope.log",
-      "!bitinfocharts.html",
+      "!*.log",
       "!venv/"
     ],
     "extraResources": [
@@ -53,34 +52,13 @@
         "to": "python_embed/",
         "filter": ["**/*"]
       },
-      {
-        "from": "../whalescope.py",
-        "to": "whalescope.py"
-      },
-      {
-        "from": "../bitcoin.py",
-        "to": "bitcoin.py"
-      },
-      {
-        "from": "../blackrock.py",
-        "to": "blackrock.py"
-      },
-      {
-        "from": "../lido_staking.py",
-        "to": "lido_staking.py"
-      },
-      {
-        "from": "../whalescope.db",
-        "to": "whalescope.db"
-      },
-      {
-        "from": "../config.ini",
-        "to": "config.ini"
-      },
-      {
-        "from": "../.env",
-        "to": ".env"
-      },
+      { "from": "../whalescope.py", "to": "whalescope.py" },
+      { "from": "../bitcoin.py", "to": "bitcoin.py" },
+      { "from": "../blackrock.py", "to": "blackrock.py" },
+      { "from": "../lido_staking.py", "to": "lido_staking.py" },
+      { "from": "../whalescope.db", "to": "whalescope.db" },
+      { "from": "../config.ini", "to": "config.ini" },
+      { "from": "../.env", "to": ".env" },
       {
         "from": "./assets/",
         "to": "assets/",
@@ -111,3 +89,4 @@
     "electron-builder": "^26.0.12"
   }
 }
+

@@ -1,0 +1,15 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+const dmgName = 'WhaleScope-1.0.0.dmg';
+const distPath = path.join(__dirname, 'dist', dmgName);
+const desktopPath = path.join(os.homedir(), 'Desktop', dmgName);
+
+fs.copyFile(distPath, desktopPath, (err) => {
+  if (err) {
+    console.error('Error copying DMG to Desktop:', err);
+  } else {
+    console.log('DMG copied to Desktop successfully.');
+  }
+});

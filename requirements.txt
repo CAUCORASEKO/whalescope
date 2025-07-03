@@ -21,5 +21,5 @@ soupsieve==2.5
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.2
-websockets==12.0
+websockets==10.4
 yfinance==0.2.40
