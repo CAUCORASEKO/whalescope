@@ -27,7 +27,8 @@ The primary goal of WhaleScope is to facilitate academic research by providing a
 WhaleScope is an ongoing project developed as part of a professional internship for Aalto University. The application is functional but awaits final instructions regarding its deployment for the internship. Future updates will include additional features, enhanced documentation in the GitHub Wiki, and testing on multiple platforms.
 
 ### Contributors
-- [Your Name] (Student, Aalto University)
+- Claudio Valenzuela (Student, Raseko)
+- Ville Savolainen (Researcher, Aalto University)
 
 ### License
 This project is licensed under the MIT License (to be finalized).
@@ -61,7 +62,8 @@ WhaleScope-sovelluksen päätavoite on helpottaa akateemista tutkimusta tarjoama
 WhaleScope on meneillään oleva projekti, joka on kehitetty osana Aalto-yliopiston ammattiharjoittelua. Sovellus on toimiva, mutta odottaa lopullisia ohjeita harjoittelun käyttöönotosta. Tulevat päivitykset sisältävät lisäominaisuuksia, parannetun dokumentaation GitHub Wikissä ja testauksen useilla alustoilla.
 
 ### Tekijät
-- [Your Name] (Opiskelija, Aalto-yliopisto)
+- Clauudio Valenzuela (Opiskelija, Raseko)
+- Ville Savolainen (Tutkija, Aalto-yliopisto)
 
 ### Lisenssi
 Tämä projekti on lisensoitu MIT-lisenssillä (vahvistetaan myöhemmin).
