@@ -1,5 +1,3 @@
-# whalescope.py
-
 import sys
 import subprocess
 import json
@@ -48,13 +46,15 @@ def update_data(mode, start_date=None, end_date=None):
     scripts = {
         'bitcoin': os.path.join(base_dir, 'bitcoin.py'),
         'blackrock': os.path.join(base_dir, 'blackrock.py'),
-        'lido': os.path.join(base_dir, 'lido_staking.py')
+        'lido': os.path.join(base_dir, 'lido_staking.py'),
+        'binance-polar': os.path.join(base_dir, 'binance_polar.py')
     }
 
     output_files = {
         'bitcoin': os.path.join(base_dir, 'output.json'),
         'blackrock': os.path.join(base_dir, 'blackrock_output.json'),
-        'lido': os.path.join(base_dir, 'lido_output.json')
+        'lido': os.path.join(base_dir, 'lido_output.json'),
+        'binance-polar': os.path.join(base_dir, 'binance_polar_output.json')
     }
 
     script = scripts.get(mode)
@@ -66,10 +66,32 @@ def update_data(mode, start_date=None, end_date=None):
 
     python_command = get_python_command()
     cmd = [python_command, script]
-    if start_date and end_date:
+    if mode == 'binance-polar':
+        cmd.append('binance_polar')
+    elif start_date and end_date:
         cmd.extend(['--start-date', start_date, '--end-date', end_date])
 
+    # Configurar PYTHONPATH para incluir site-packages de Python 3.11
+    venv_site_packages = os.path.join(base_dir, 'venv', 'lib', 'python3.11', 'site-packages')
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
+    if os.path.exists(venv_site_packages):
+        env["PYTHONPATH"] = f"{venv_site_packages}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"
+    else:
+        logger.error(f"site-packages not found at {venv_site_packages}")
+        return {"error": f"site-packages not found at {venv_site_packages}"}
+
+    logger.info(f"Python command: {python_command}")
     logger.info(f"Executing: {' '.join(cmd)}")
+    logger.info(f"PYTHONPATH: {env.get('PYTHONPATH', 'Not set')}")
+    logger.info(f"Working directory: {base_dir}")
+
+    # Depurar el Python usado
+    python_version_cmd = [python_command, "--version"]
+    try:
+        version_result = subprocess.run(python_version_cmd, capture_output=True, text=True)
+        logger.info(f"Python version: {version_result.stdout.strip()}")
+    except Exception as e:
+        logger.error(f"Error checking Python version: {str(e)}")
 
     try:
         result = subprocess.run(
@@ -77,7 +99,8 @@ def update_data(mode, start_date=None, end_date=None):
             capture_output=True,
             text=True,
             check=True,
-            env={**os.environ, "PYTHONUNBUFFERED": "1"}
+            env=env,
+            cwd=base_dir  # Establecer directorio de trabajo
         )
 
         stdout_clean = result.stdout.strip()
@@ -91,6 +114,11 @@ def update_data(mode, start_date=None, end_date=None):
         if mode == 'lido' and not all(k in data for k in ['markets', 'yields', 'analytics', 'charts']):
             logger.error("Missing keys in Lido data")
             return {"error": "Invalid JSON structure from lido"}
+
+        # Validación mínima para 'binance-polar'
+        if mode == 'binance-polar' and not isinstance(data, list):
+            logger.error("Binance Polar data must be a list of objects")
+            return {"error": "Invalid JSON structure from binance-polar"}
 
         with open(output_file, 'w') as f:
             json.dump(data, f, indent=4)
@@ -112,12 +140,12 @@ def update_data(mode, start_date=None, end_date=None):
 # === Entry Point ===
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="WhaleScope data updater")
-    parser.add_argument('mode', choices=['bitcoin', 'blackrock', 'lido', 'all'], help="Mode to run")
+    parser.add_argument('mode', choices=['bitcoin', 'blackrock', 'lido', 'binance-polar', 'all'], help="Mode to run")
     parser.add_argument('--start-date', type=str, help="Start date (YYYY-MM-DD)")
     parser.add_argument('--end-date', type=str, help="End date (YYYY-MM-DD)")
     args = parser.parse_args()
 
-    modes = ['bitcoin', 'blackrock', 'lido'] if args.mode == 'all' else [args.mode]
+    modes = ['bitcoin', 'blackrock', 'lido', 'binance-polar'] if args.mode == 'all' else [args.mode]
     results = {}
 
     for mode in modes:

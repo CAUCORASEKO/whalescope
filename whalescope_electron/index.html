@@ -1,567 +1,629 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.plot.ly https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';">
-  <title>WhaleScope</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 10px;
-      background-color: #121212;
-      color: #eee;
-    }
-    h1 {
-      margin-bottom: 15px;
-      font-weight: bold;
-      font-size: 1.5em;
-      color: #ffffff;
-    }
-    #navButtons {
-      margin-bottom: 15px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    button.navBtn {
-      background-color: #0d6efd;
-      border: none;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9em;
-    }
-    button.navBtn.active, button.navBtn:hover {
-      background-color: #0b5ed7;
-    }
-    .section {
-      display: none;
-    }
-    .section.active {
-      display: block;
-    }
-    .flex-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: #1e1e1e;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #000;
-      flex: 1 1 100%;
-      min-width: 0;
-    }
-    .card-flex-large {
-      flex: 1 1 100%;
-    }
-    .card h2, .card h3 {
-      font-weight: 600;
-      margin-bottom: 10px;
-      font-size: 1.1em;
-      color: #ffffff;
-    }
-    #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart, #lido-ethStakedChart {
-      width: 100%;
-      height: 50vh;
-      min-height: 200px;
-      max-height: 400px;
-    }
-    label {
-      margin-right: 8px;
-      color: #cccccc;
-      font-size: 0.9em;
-    }
-    input[type="date"] {
-      padding: 5px;
-      border-radius: 4px;
-      border: 1px solid #333;
-      background: #1e1e1e;
-      color: #eee;
-      font-size: 0.9em;
-    }
-    #filters, #blackrock-filters, #lido-filters {
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-    button.filter-btn {
-      background-color: #0d6efd;
-      border: none;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9em;
-    }
-    button.filter-btn:hover {
-      background-color: #0b5ed7;
-    }
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #1e1e1e;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid #333;
-      text-align: left;
-      font-size: 0.85em;
-    }
-    th {
-      background-color: #333;
-      font-weight: 600;
-      color: #ffffff;
-    }
-    td {
-      color: #cccccc;
-    }
-    tbody tr:hover {
-      background-color: #333;
-    }
-    .centered-cell {
-      text-align: center;
-    }
-    #bitcoin-loading, #blackrock-loading, #lido-loading {
-      display: none;
-      color: #0d6efd;
-      font-weight: 600;
-      margin-bottom: 15px;
-    }
-    #bitcoin-status, #blackrock-status, #lido-status {
-      margin-bottom: 10px;
-      font-size: 0.9em;
-      color: #cccccc;
-    }
-    .error {
-      color: red;
-      font-size: 0.9em;
-      margin-bottom: 10px;
-    }
-    .analysis-card {
-      background: #1e1e1e;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #000;
-      flex: 1 1 100%;
-    }
-    .analysis-card h3 {
-      font-weight: 600;
-      margin-bottom: 10px;
-      font-size: 1.1em;
-      color: #ffffff;
-    }
-    .analysis-card p {
-      margin: 5px 0;
-      color: #cccccc;
-      font-size: 0.9em;
-    }
-    .analysis-card .conclusion {
-      font-weight: 600;
-      color: #0d6efd;
-    }
-    #blackrock-totalBalanceTable table {
-      width: 100%;
-      border-collapse: collapse;
-      color: #cccccc;
-      background-color: #1e1e1e;
-    }
-    #blackrock-totalBalanceTable th, #blackrock-totalBalanceTable td {
-      border: 1px solid #333;
-      padding: 8px;
-      text-align: left;
-    }
-    #blackrock-totalBalanceTable th {
-      background-color: #333;
-    }
-    @media (min-width: 768px) {
-      .card {
-        flex: 1 1 calc(50% - 10px);
-      }
-      .card-flex-large {
-        flex: 2 1 calc(66.66% - 10px);
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-      .card h2, .card h3 {
-        font-size: 1.2em;
-      }
-      button.filter-btn {
-        padding: 10px 15px;
-        font-size: 1em;
-      }
-      label, input[type="date"] {
-        font-size: 1em;
-      }
-      th, td {
-        font-size: 0.9em;
-      }
-    }
-    @media (min-width: 1024px) {
-      .card {
-        flex: 1 1 calc(33.33% - 10px);
-      }
-      .card-flex-large {
-        flex: 2 1 calc(66.66% - 10px);
-      }
-      h1 {
-        font-size: 2em;
-      }
-      .card h2, .card h3 {
-        font-size: 1.3em;
-      }
-    }
-    @media (max-width: 767px) {
-      body {
-        margin: 5px;
-      }
-      h1 {
-        font-size: 1.3em;
-      }
-      .flex-row {
-        gap: 5px;
-        margin-bottom: 10px;
-      }
-      .card {
-        padding: 8px;
-      }
-      .card h2, .card h3 {
-        font-size: 1em;
-      }
-      button.filter-btn {
-        padding: 6px 10px;
-        font-size: 0.8em;
-      }
-      label, input[type="date"] {
-        font-size: 0.8em;
-      }
-      th, td {
-        font-size: 0.75em;
-        padding: 6px;
-      }
-      #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart, #lido-ethStakedChart {
-        height: 40vh;
-        min-height: 150px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.plot.ly https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';">
+    <title>WhaleScope</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #121212;
+            color: #eee;
+        }
+        h1 {
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: #ffffff;
+        }
+        #navButtons {
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        button.navBtn {
+            background-color: #0d6efd;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        button.navBtn.active, button.navBtn:hover {
+            background-color: #0b5ed7;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #000;
+            flex: 1 1 100%;
+            min-width: 0;
+        }
+        .card-flex-large {
+            flex: 1 1 100%;
+        }
+        .card h2, .card h3 {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #ffffff;
+        }
+        .chart-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart, #lido-ethStakedChart, #binancePolarChart {
+            width: 100%;
+            height: 70vh;
+            min-height: 300px;
+            max-height: 600px;
+            padding-left: 60px;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+        label {
+            margin-right: 8px;
+            color: #cccccc;
+            font-size: 0.9em;
+        }
+        input[type="date"] {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            background: #1e1e1e;
+            color: #eee;
+            font-size: 0.9em;
+        }
+        #filters, #blackrock-filters, #lido-filters, #binance-polar-filters {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        button.filter-btn {
+            background-color: #0d6efd;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        button.filter-btn:hover {
+            background-color: #0b5ed7;
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            text-align: left;
+            font-size: 0.85em;
+        }
+        th {
+            background-color: #333;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        td {
+            color: #cccccc;
+        }
+        tbody tr:hover {
+            background-color: #333;
+        }
+        .centered-cell {
+            text-align: center;
+        }
+        .loading {
+            display: none;
+            color: #0d6efd;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        #bitcoin-status, #blackrock-status, #lido-status, #binance-polar-status {
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #cccccc;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .analysis-card {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #000;
+            flex: 1 1 100%;
+        }
+        .analysis-card h3 {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #ffffff;
+        }
+        .analysis-card p {
+            margin: 5px 0;
+            color: #cccccc;
+            font-size: 0.9em;
+        }
+        .analysis-card .conclusion {
+            font-weight: 600;
+            color: #0d6efd;
+        }
+        #blackrock-totalBalanceTable table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #cccccc;
+            background-color: #1e1e1e;
+        }
+        #blackrock-totalBalanceTable th, #blackrock-totalBalanceTable td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: left;
+        }
+        #blackrock-totalBalanceTable th {
+            background-color: #333;
+        }
+        @media (min-width: 768px) {
+            .card {
+                flex: 1 1 calc(50% - 10px);
+            }
+            .card-flex-large {
+                flex: 2 1 calc(66.66% - 10px);
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .card h2, .card h3 {
+                font-size: 1.2em;
+            }
+            button.filter-btn {
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+            label, input[type="date"] {
+                font-size: 1em;
+            }
+            th, td {
+                font-size: 0.9em;
+            }
+        }
+        @media (min-width: 1024px) {
+            .card {
+                flex: 1 1 calc(33.33% - 10px);
+            }
+            .card-flex-large {
+                flex: 2 1 calc(66.66% - 10px);
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .card h2, .card h3 {
+                font-size: 1.3em;
+            }
+        }
+        @media (max-width: 767px) {
+            body {
+                margin: 5px;
+            }
+            h1 {
+                font-size: 1.3em;
+            }
+            .flex-row {
+                gap: 5px;
+                margin-bottom: 10px;
+            }
+            .card {
+                padding: 8px;
+            }
+            .card h2, .card h3 {
+                font-size: 1em;
+            }
+            button.filter-btn {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            label, input[type="date"] {
+                font-size: 0.8em;
+            }
+            th, td {
+                font-size: 0.75em;
+                padding: 6px;
+            }
+            #priceTrendChart, #feesChart, #btcBalanceChart, #ethBalanceChart, #lido-ethStakedChart, #binancePolarChart {
+                height: 40vh;
+                min-height: 150px;
+                padding-left: 40px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>WhaleScope</h1>
+    <h1>WhaleScope</h1>
 
-  <div id="navButtons">
-    <button class="navBtn active" data-section="bitcoin-section" onclick="window.showSection('bitcoin')">Bitcoin</button>
-    <button class="navBtn" data-section="blackrock-section" onclick="window.showSection('blackrock')">BlackRock</button>
-    <button class="navBtn" data-section="lido-section" onclick="window.showSection('lido')">Lido</button>
-  </div>
-
-  <!-- Bitcoin Section -->
-  <div id="bitcoin-section" class="section active">
-    <h2>🧠 Bitcoin Analytics</h2>
-    <div id="bitcoin-loading">Loading...</div>
-    <div id="bitcoin-status"></div>
-
-    <div id="filters">
-      <label for="startDate">Start Date:</label>
-      <input id="startDate" type="date" value="2025-05-01" />
-      <label for="endDate">End Date:</label>
-      <input id="endDate" type="date" value="2025-05-22" />
-      <button id="refreshBtn" class="filter-btn">🔄 Refresh Data</button>
-      <button id="exportCsvBtn" class="filter-btn">📤 Export CSV</button>
-      <button id="exportPdfBtn" class="filter-btn">📤 Export PDF</button>
+    <div id="navButtons">
+        <button class="navBtn active" data-section="bitcoin-section" onclick="window.showSection('bitcoin')">Bitcoin</button>
+        <button class="navBtn" data-section="blackrock-section" onclick="window.showSection('blackrock')">BlackRock</button>
+        <button class="navBtn" data-section="lido-section" onclick="window.showSection('lido')">Lido</button>
+        <button class="navBtn" data-section="binance-polar-section" onclick="window.showSection('binance-polar')">Binance Polar</button>
     </div>
 
-    <div class="flex-row">
-      <div class="card card-flex-large">
-        <h3>📉 Price Trend (Historical Data)</h3>
-        <div id="priceTrendError" class="error"></div>
-        <div id="priceTrendChart"></div>
-      </div>
-      <div class="card">
-        <h3>📊 Market Stats (Updated: <span id="lastUpdated">N/A</span>)</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="marketStatsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
+    <!-- Bitcoin Section -->
+    <div id="bitcoin-section" class="section active">
+        <h2>🧠 Bitcoin Analytics</h2>
+        <div id="bitcoin-loading" class="loading">Loading...</div>
+        <div id="bitcoin-status"></div>
+
+        <div id="filters">
+            <label for="startDate">Start Date:</label>
+            <input id="startDate" type="date" value="2025-05-01" />
+            <label for="endDate">End Date:</label>
+            <input id="endDate" type="date" value="2025-05-22" />
+            <button id="refreshBtn" class="filter-btn">🔄 Refresh Data</button>
+            <button id="exportCsvBtn" class="filter-btn">📤 Export CSV</button>
+            <button id="exportPdfBtn" class="filter-btn">📤 Export PDF</button>
         </div>
-      </div>
-      <div class="card">
-        <h3>📈 Performance Metrics</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Period</th>
-                <th>Change (%)</th>
-              </tr>
-            </thead>
-            <tbody id="performanceTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
+
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>📉 Price Trend (Historical Data)</h3>
+                <div id="priceTrendError" class="error"></div>
+                <div class="chart-wrapper">
+                    <div id="priceTrendChart"></div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📊 Market Stats (Updated: <span id="lastUpdated">N/A</span>)</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketStatsTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📈 Performance Metrics</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Change (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="performanceTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <div class="flex-row">
-      <div class="card card-flex-large">
-        <h3>🐳 Whale Activity (Top Flows)</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Date & Time</th>
-                <th>Input (USD)</th>
-                <th>Output (USD)</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="topFlowsTableBody">
-              <tr><td colspan="4" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>🐳 Whale Activity (Top Flows)</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Input (USD)</th>
+                                <th>Output (USD)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topFlowsTableBody">
+                            <tr><td colspan="4" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📥📤 Exchange Flows</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flowsTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="card">
-        <h3>📥📤 Exchange Flows</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="flowsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
+
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>💸 Transaction Fees</h3>
+                <div id="feesError" class="error"></div>
+                <div class="chart-wrapper">
+                    <div id="feesChart"></div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <div class="flex-row">
-      <div class="card card-flex-large">
-        <h3>💸 Transaction Fees</h3>
-        <div id="feesError" class="error"></div>
-        <div id="feesChart"></div>
-      </div>
-    </div>
-
-    <div class="flex-row">
-      <div class="analysis-card">
-        <h3>🔍 Market Analysis</h3>
-        <p id="marketAnalysis">Loading analysis...</p>
-        <p id="marketConclusion" class="conclusion">Loading conclusion...</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- BlackRock Section -->
-  <div id="blackrock-section" class="section">
-    <h2>BlackRock Analytics</h2>
-    <div id="blackrock-loading">Loading...</div>
-    <div id="blackrock-status"></div>
-
-    <div id="blackrock-filters">
-      <label for="blackrock-startDate">Start Date:</label>
-      <input id="blackrock-startDate" type="date" value="2025-05-01" />
-      <label for="blackrock-endDate">End Date:</label>
-      <input id="blackrock-endDate" type="date" value="2025-06-05" />
-      <button id="blackrock-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
-      <button id="blackrock-exportBtn" class="filter-btn">📤 Export CSV</button>
-      <button id="blackrock-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
-    </div>
-
-    <div class="flex-row">
-      <div class="card">
-        <h3>💰 Total Account Balance</h3>
-        <div id="blackrock-totalBalanceError" class="error"></div>
-        <p id="blackrock-totalBalance">Loading...</p>
-      </div>
-      <div class="card card-flex-large">
-        <h3>📊 Historical Total Balance</h3>
-        <div id="blackrock-totalBalanceTable"></div>
-      </div>
-    </div>
-
-    <div class="flex-row">
-      <div class="card card-flex-large">
-        <h3>📈 BTC Balance Over Time</h3>
-        <div id="btcBalanceChartError" class="error"></div>
-        <div id="btcBalanceChart"></div>
-      </div>
-      <div class="card card-flex-large">
-        <h3>📈 ETH Balance Over Time</h3>
-        <div id="ethBalanceChartError" class="error"></div>
-        <div id="ethBalanceChart"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Lido Section -->
-  <div id="lido-section" class="section">
-    <h2>Lido Analytics</h2>
-    <div id="lido-loading">Loading...</div>
-    <div id="lido-status"></div>
-
-    <div id="lido-filters">
-      <label for="lido-startDate">Start Date:</label>
-      <input id="lido-startDate" type="date" value="2025-05-01" />
-      <label for="lido-endDate">End Date:</label>
-      <input id="lido-endDate" type="date" value="2025-06-05" />
-      <button id="lido-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
-      <button id="lido-exportBtn" class="filter-btn">📤 Export CSV</button>
-      <button id="lido-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
-    </div>
-
-    <div class="flex-row">
-      <div class="card">
-        <h3>📊 Market Stats</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="lido-marketStatsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
+        <div class="flex-row">
+            <div class="analysis-card">
+                <h3>🔍 Market Analysis</h3>
+                <p id="marketAnalysis">Loading analysis...</p>
+                <p id="marketConclusion" class="conclusion">Loading conclusion...</p>
+            </div>
         </div>
-      </div>
-      <div class="card">
-        <h3>📈 Yields</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="lido-yieldsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card">
-        <h3>🔍 Analytics</h3>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody id="lido-analyticsTableBody">
-              <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <h4>Staking Queues</h4>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>ETH Amount</th>
-                <th>Avg Wait Time (Days)</th>
-              </tr>
-            </thead>
-            <tbody id="lido-queuesTableBody">
-              <tr><td colspan="3" class="centered-cell">Loading data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
 
-    <div class="flex-row">
-      <div class="card card-flex-large">
-        <h3>📉 Historical ETH Staked</h3>
-        <div id="lido-ethStakedChartError" class="error"></div>
-        <div id="lido-ethStakedChart"></div>
-      </div>
+    <!-- BlackRock Section -->
+    <div id="blackrock-section" class="section">
+        <h2>BlackRock Analytics</h2>
+        <div id="blackrock-loading" class="loading">Loading...</div>
+        <div id="blackrock-status"></div>
+
+        <div id="blackrock-filters">
+            <label for="blackrock-startDate">Start Date:</label>
+            <input id="blackrock-startDate" type="date" value="2025-05-01" />
+            <label for="blackrock-endDate">End Date:</label>
+            <input id="blackrock-endDate" type="date" value="2025-06-05" />
+            <button id="blackrock-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
+            <button id="blackrock-exportBtn" class="filter-btn">📤 Export CSV</button>
+            <button id="blackrock-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
+        </div>
+
+        <div class="flex-row">
+            <div class="card">
+                <h3>💰 Total Account Balance</h3>
+                <div id="blackrock-totalBalanceError" class="error"></div>
+                <p id="blackrock-totalBalance">Loading...</p>
+            </div>
+            <div class="card card-flex-large">
+                <h3>📊 Historical Total Balance</h3>
+                <div id="blackrock-totalBalanceTable"></div>
+            </div>
+        </div>
+
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>📈 BTC Balance Over Time</h3>
+                <div id="btcBalanceChartError" class="error"></div>
+                <div class="chart-wrapper">
+                    <div id="btcBalanceChart"></div>
+                </div>
+            </div>
+            <div class="card card-flex-large">
+                <h3>📈 ETH Balance Over Time</h3>
+                <div id="ethBalanceChartError" class="error"></div>
+                <div class="chart-wrapper">
+                    <div id="ethBalanceChart"></div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    console.log('[Index] Script loaded');
-    
-    window.showSection = function(section) {
-      console.log(`[Index] showSection called with: ${section}`);
-      try {
-        const buttons = document.querySelectorAll('.navBtn');
-        const sections = document.querySelectorAll('.section');
+    <!-- Lido Section -->
+    <div id="lido-section" class="section">
+        <h2>Lido Analytics</h2>
+        <div id="lido-loading" class="loading">Loading...</div>
+        <div id="lido-status"></div>
 
-        console.log(`[Index] Found ${buttons.length} buttons`);
-        console.log(`[Index] Found ${sections.length} sections`);
+        <div id="lido-filters">
+            <label for="lido-startDate">Start Date:</label>
+            <input id="lido-startDate" type="date" value="2025-05-01" />
+            <label for="lido-endDate">End Date:</label>
+            <input id="lido-endDate" type="date" value="2025-06-05" />
+            <button id="lido-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
+            <button id="lido-exportBtn" class="filter-btn">📤 Export CSV</button>
+            <button id="lido-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
+        </div>
 
-        buttons.forEach(btn => btn.classList.remove('active'));
-        sections.forEach(sec => sec.classList.remove('active'));
+        <div class="flex-row">
+            <div class="card">
+                <h3>📊 Market Stats</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lido-marketStatsTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📈 Yields</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lido-yieldsTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <h3>🔍 Analytics</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lido-analyticsTableBody">
+                            <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <h4>Staking Queues</h4>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>ETH Amount</th>
+                                <th>Avg Wait Time (Days)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lido-queuesTableBody">
+                            <tr><td colspan="3" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-        const btn = document.querySelector(`.navBtn[data-section="${section}-section"]`);
-        const sec = document.getElementById(`${section}-section`);
-        console.log('[Index] Selected button:', btn ? btn.outerHTML : 'null');
-        console.log('[Index] Selected section:', sec ? sec.id : 'null');
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>📉 Historical ETH Staked</h3>
+                <div id="lido-ethStakedChartError" class="error"></div>
+                <div class="chart-wrapper">
+                    <div id="lido-ethStakedChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        if (btn && sec) {
-          btn.classList.add('active');
-          sec.classList.add('active');
-          console.log('[Index] Added active class to button and section');
+    <!-- Binance Polar Section -->
+    <div id="binance-polar-section" class="section">
+        <h2>🌐 Binance Polar Analytics</h2>
+        <div id="binance-polar-loading" class="loading">Loading...</div>
+        <div id="binance-polar-status"></div>
+        <div id="binance-polar-filters">
+            <button id="binance-polar-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
+            <button id="binance-polar-exportCsvBtn" class="filter-btn">📤 Export CSV</button>
+            <button id="binance-polar-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
+        </div>
+        <div class="flex-row">
+            <div class="card card-flex-large">
+                <h3>📊 Polar Chart</h3>
+                <div id="binance-polar-error" class="error"></div>
+                <div class="chart-wrapper">
+                    <canvas id="binancePolarChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="card">
+                <h3>📈 Trading Activity</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Percent (%)</th>
+                                <th>Volume (USDT)</th>
+                                <th>Delta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="binance-polar-tableBody">
+                            <tr><td colspan="4" class="centered-cell">Loading data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-          const event = new CustomEvent('sectionChange', { 
-            detail: { section: section },
-            bubbles: true,
-            cancelable: true
-          });
-          console.log(`[Index] Dispatching sectionChange event for: ${section}`, event);
-          document.dispatchEvent(event);
-        } else {
-          console.error(`[Index] Button or section not found for: ${section}`);
-        }
-      } catch (error) {
-        console.error('[Index] Error in showSection:', error.message, error.stack);
-      }
-    };
+    <script>
+        console.log('[Index] Script loaded');
+        
+        window.showSection = function(section) {
+            console.log(`[Index] showSection called with: ${section}`);
+            try {
+                const buttons = document.querySelectorAll('.navBtn');
+                const sections = document.querySelectorAll('.section');
 
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('[Index] DOM content loaded');
-      window.showSection('bitcoin');
-    });
-  </script>
+                console.log(`[Index] Found ${buttons.length} buttons`);
+                console.log(`[Index] Found ${sections.length} sections`);
 
-  <script src="renderer.js"></script>
+                buttons.forEach(btn => btn.classList.remove('active'));
+                sections.forEach(sec => sec.classList.remove('active'));
+
+                const btn = document.querySelector(`.navBtn[data-section="${section}-section"]`);
+                const sec = document.getElementById(`${section}-section`);
+                console.log('[Index] Selected button:', btn ? btn.outerHTML : 'null');
+                console.log('[Index] Selected section:', sec ? sec.id : 'null');
+
+                if (btn && sec) {
+                    btn.classList.add('active');
+                    sec.classList.add('active');
+                    console.log('[Index] Added active class to button and section');
+
+                    const event = new CustomEvent('sectionChange', { 
+                        detail: { section: section },
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    console.log(`[Index] Dispatching sectionChange event for: ${section}`, event);
+                    document.dispatchEvent(event);
+                } else {
+                    console.error(`[Index] Button or section not found for: ${section}`);
+                }
+            } catch (error) {
+                console.error('[Index] Error in showSection:', error.message, error.stack);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[Index] DOM content loaded');
+            window.showSection('bitcoin');
+        });
+    </script>
+
+    <script src="renderer.js"></script>
 </body>
 </html>
