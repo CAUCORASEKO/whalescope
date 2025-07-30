@@ -47,14 +47,16 @@ def update_data(mode, start_date=None, end_date=None):
         'bitcoin': os.path.join(base_dir, 'bitcoin.py'),
         'blackrock': os.path.join(base_dir, 'blackrock.py'),
         'lido': os.path.join(base_dir, 'lido_staking.py'),
-        'binance-polar': os.path.join(base_dir, 'binance_polar.py')
+        'binance-polar': os.path.join(base_dir, 'binance_polar.py'),
+        'eth': os.path.join(base_dir, 'eth.py')  # New ETH script
     }
 
     output_files = {
         'bitcoin': os.path.join(base_dir, 'output.json'),
         'blackrock': os.path.join(base_dir, 'blackrock_output.json'),
         'lido': os.path.join(base_dir, 'lido_output.json'),
-        'binance-polar': os.path.join(base_dir, 'binance_polar_output.json')
+        'binance-polar': os.path.join(base_dir, 'binance_polar_output.json'),
+        'eth': os.path.join(base_dir, 'eth_output.json')  # New ETH output file
     }
 
     script = scripts.get(mode)
@@ -140,12 +142,12 @@ def update_data(mode, start_date=None, end_date=None):
 # === Entry Point ===
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="WhaleScope data updater")
-    parser.add_argument('mode', choices=['bitcoin', 'blackrock', 'lido', 'binance-polar', 'all'], help="Mode to run")
+    parser.add_argument('mode', choices=['bitcoin', 'blackrock', 'lido', 'binance-polar', 'eth', 'all'], help="Mode to run")
     parser.add_argument('--start-date', type=str, help="Start date (YYYY-MM-DD)")
     parser.add_argument('--end-date', type=str, help="End date (YYYY-MM-DD)")
     args = parser.parse_args()
 
-    modes = ['bitcoin', 'blackrock', 'lido', 'binance-polar'] if args.mode == 'all' else [args.mode]
+    modes = ['bitcoin', 'blackrock', 'lido', 'binance-polar', 'eth'] if args.mode == 'all' else [args.mode]
     results = {}
 
     for mode in modes:

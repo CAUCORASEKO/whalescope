@@ -4,16 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[Renderer] DOM content loaded');
     // Verify existence of HTML elements
     const elements = [
-        'bitcoin-status', 'blackrock-status', 'lido-status',
-        'bitcoin-loading', 'blackrock-loading', 'lido-loading',
-        'priceTrendChart', 'feesChart', 'refreshBtn', 'blackrock-refreshBtn', 'lido-refreshBtn',
+        'bitcoin-status', 'blackrock-status', 'lido-status', 'eth-status',
+        'bitcoin-loading', 'blackrock-loading', 'lido-loading', 'eth-loading',
+        'priceTrendChart', 'feesChart', 'refreshBtn', 'blackrock-refreshBtn', 'lido-refreshBtn', 'eth-refreshBtn',
         'blackrock-totalBalance', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart',
         'blackrock-totalBalanceTable', 'lido-marketStatsTableBody', 'lido-yieldsTableBody',
-        'lido-analyticsTableBody', 'lido-queuesTableBody',
-        'exportCsvBtn', 'blackrock-exportBtn', 'lido-exportBtn',
-        'exportPdfBtn', 'blackrock-exportPdfBtn', 'lido-exportPdfBtn',
+        'lido-analyticsTableBody', 'lido-queuesTableBody', 'eth-priceTrendChart', 'eth-feesChart',
+        'exportCsvBtn', 'blackrock-exportBtn', 'lido-exportBtn', 'eth-exportCsvBtn',
+        'exportPdfBtn', 'blackrock-exportPdfBtn', 'lido-exportPdfBtn', 'eth-exportPdfBtn',
         'binance-polar-status', 'binance-polar-loading', 'binance-polar-refreshBtn', 
-        'binance-polar-exportCsvBtn', 'binance-polar-exportPdfBtn', 'binancePolarChart', 'binance-polar-tableBody'
+        'binance-polar-exportCsvBtn', 'binance-polar-exportPdfBtn', 'binancePolarChart', 'binance-polar-tableBody',
+        'eth-marketStatsTableBody', 'eth-performanceTableBody', 'eth-topFlowsTableBody', 'eth-flowsTableBody',
+        'eth-lastUpdated', 'eth-marketAnalysis', 'eth-marketConclusion'
     ];
     elements.forEach(id => {
         console.log(`[Renderer] ${id} exists: ${!!document.getElementById(id)}`);
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startDate = new Date(today - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     console.log(`[Renderer] Initial date range: start=${startDate}, end=${endDate}`);
 
-    ['startDate', 'endDate', 'blackrock-startDate', 'blackrock-endDate', 'lido-startDate', 'lido-endDate'].forEach(id => {
+    ['startDate', 'endDate', 'blackrock-startDate', 'blackrock-endDate', 'lido-startDate', 'lido-endDate', 'eth-startDate', 'eth-endDate'].forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.value = id.includes('start') ? startDate : endDate;
@@ -212,12 +214,54 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[Renderer] binance-polar-exportPdfBtn not found');
     }
 
+    // ETH refresh button
+    const ethRefreshBtn = document.getElementById('eth-refreshBtn');
+    if (ethRefreshBtn) {
+        ethRefreshBtn.addEventListener('click', () => {
+            console.log('[Renderer] ETH refresh button clicked');
+            const startDateInput = document.getElementById('eth-startDate')?.value;
+            const endDateInput = document.getElementById('eth-endDate')?.value;
+            if (startDateInput && endDateInput && validateDates(startDateInput, endDateInput)) {
+                console.log(`[Renderer] Refreshing eth data with start=${startDateInput}, end=${endDateInput}`);
+                loadSectionData('eth', startDateInput, endDateInput);
+            } else {
+                console.error('[Renderer] Invalid date range for eth refresh');
+                const status = document.getElementById('eth-status');
+                if (status) status.innerHTML = 'Error: Select valid dates (not future and start ≤ end)';
+            }
+        });
+    } else {
+        console.error('[Renderer] eth-refreshBtn not found');
+    }
+
+    // ETH CSV export button
+    const ethCsvBtn = document.getElementById('eth-exportCsvBtn');
+    if (ethCsvBtn) {
+        ethCsvBtn.addEventListener('click', () => {
+            console.log('[Renderer] ETH CSV export button clicked');
+            exportETHToCSV();
+        });
+    } else {
+        console.error('[Renderer] eth-exportCsvBtn not found');
+    }
+
+    // ETH PDF export button
+    const ethPdfBtn = document.getElementById('eth-exportPdfBtn');
+    if (ethPdfBtn) {
+        ethPdfBtn.addEventListener('click', () => {
+            console.log('[Renderer] ETH PDF export button clicked');
+            exportETHToPDF();
+        });
+    } else {
+        console.error('[Renderer] eth-exportPdfBtn not found');
+    }
+
     // Handle chart resizing
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            const plotlyCharts = ['priceTrendChart', 'feesChart', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart'];
+            const plotlyCharts = ['priceTrendChart', 'feesChart', 'btcBalanceChart', 'ethBalanceChart', 'lido-ethStakedChart', 'eth-priceTrendChart', 'eth-feesChart'];
             plotlyCharts.forEach(id => {
                 const chart = document.getElementById(id);
                 if (chart && chart.data) {
@@ -521,6 +565,75 @@ function exportLidoToPDF() {
     } catch (error) {
         console.error('[Renderer] Error exporting Lido PDF:', error);
         document.getElementById('lido-status').innerHTML = `Error exporting PDF: ${error.message}`;
+    }
+}
+
+// New ETH CSV export function
+function exportETHToCSV() {
+    const data = window.ethData;
+    if (!data || !data.price_history) {
+        console.error('[Renderer] No ETH data to export');
+        document.getElementById('eth-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    const csvRows = [];
+    csvRows.push('Date,Open,High,Low,Close,Volume,Market Cap');
+    data.price_history.dates.forEach((date, index) => {
+        csvRows.push([
+            date,
+            data.price_history.open[index].toFixed(2),
+            data.price_history.high[index].toFixed(2),
+            data.price_history.low[index].toFixed(2),
+            data.price_history.close[index].toFixed(2),
+            (data.markets?.volume_24h || 0).toFixed(2),
+            (data.markets?.market_cap || 0).toFixed(2)
+        ].join(','));
+    });
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eth_data_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    console.log('[Renderer] ETH data exported to CSV');
+    document.getElementById('eth-status').innerHTML = 'CSV exported successfully';
+}
+
+// New ETH PDF export function
+function exportETHToPDF() {
+    const data = window.ethData;
+    if (!data || !data.price_history) {
+        console.error('[Renderer] No ETH data to export');
+        document.getElementById('eth-status').innerHTML = 'Error: No data available for export';
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text('ETH Data', 10, 10);
+        let y = 20;
+        doc.text('Date | Open | High | Low | Close | Volume | Market Cap', 10, y);
+        y += 10;
+        data.price_history.dates.forEach((date, index) => {
+            doc.text(
+                `${date} | ${data.price_history.open[index].toFixed(2)} | ${data.price_history.high[index].toFixed(2)} | ` +
+                `${data.price_history.low[index].toFixed(2)} | ${data.price_history.close[index].toFixed(2)} | ` +
+                `${(data.markets?.volume_24h || 0).toFixed(2)} | ${(data.markets?.market_cap || 0).toFixed(2)}`,
+                10, y
+            );
+            y += 10;
+        });
+        doc.save(`eth_data_${new Date().toISOString().split('T')[0]}.pdf`);
+        console.log('[Renderer] ETH data exported to PDF');
+        document.getElementById('eth-status').innerHTML = 'PDF exported successfully';
+    } catch (error) {
+        console.error('[Renderer] Error exporting ETH PDF:', error);
+        document.getElementById('eth-status').innerHTML = `Error exporting PDF: ${error.message}`;
     }
 }
 
@@ -844,7 +957,7 @@ async function loadSectionData(section, startDate, endDate) {
                         range: [startDate, endDate]
                     },
                     yaxis: {
-                        title: { text: 'Balance (USD)', font: { color: '#cccccc', size: 14 }, standoff: 20 }, // Move title to margin, add standoff
+                        title: { text: 'Balance (USD)', font: { color: '#cccccc', size: 14 }, standoff: 20 },
                         tickfont: { color: '#cccccc' },
                         gridcolor: '#333',
                         tickprefix: '$',
@@ -852,10 +965,9 @@ async function loadSectionData(section, startDate, endDate) {
                     },
                     plot_bgcolor: '#1e1e1e',
                     paper_bgcolor: '#1e1e1e',
-                    margin: { t: 50, b: 50, l: 150, r: 80 }, // Increased left margin to 150
+                    margin: { t: 50, b: 50, l: 150, r: 80 },
                     autosize: true,
-                    // Adjust plot area to inset data from title
-                    domain: { x: [0.1, 1], y: [0, 1] } // Slight inset on left
+                    domain: { x: [0.1, 1], y: [0, 1] }
                 }, {
                     responsive: true
                 });
@@ -891,7 +1003,7 @@ async function loadSectionData(section, startDate, endDate) {
                         range: [startDate, endDate]
                     },
                     yaxis: {
-                        title: { text: 'Balance (USD)', font: { color: '#cccccc', size: 14 }, standoff: 20 }, // Move title to margin, add standoff
+                        title: { text: 'Balance (USD)', font: { color: '#cccccc', size: 14 }, standoff: 20 },
                         tickfont: { color: '#cccccc' },
                         gridcolor: '#333',
                         tickprefix: '$',
@@ -899,10 +1011,9 @@ async function loadSectionData(section, startDate, endDate) {
                     },
                     plot_bgcolor: '#1e1e1e',
                     paper_bgcolor: '#1e1e1e',
-                    margin: { t: 50, b: 50, l: 150, r: 80 }, // Increased left margin to 150
+                    margin: { t: 50, b: 50, l: 150, r: 80 },
                     autosize: true,
-                    // Adjust plot area to inset data from title
-                    domain: { x: [0.1, 1], y: [0, 1] } // Slight inset on left
+                    domain: { x: [0.1, 1], y: [0, 1] }
                 }, {
                     responsive: true
                 });
@@ -1008,17 +1119,16 @@ async function loadSectionData(section, startDate, endDate) {
                         range: [startDate, endDate]
                     },
                     yaxis: {
-                        title: { text: 'ETH Staked', font: { color: '#cccccc', size: 14 }, standoff: 20 }, // Move title to margin, add standoff
+                        title: { text: 'ETH Staked', font: { color: '#cccccc', size: 14 }, standoff: 20 },
                         tickfont: { color: '#cccccc' },
                         gridcolor: '#333',
                         tickformat: ',.2f'
                     },
                     plot_bgcolor: '#1e1e1e',
                     paper_bgcolor: '#1e1e1e',
-                    margin: { t: 50, b: 50, l: 150, r: 50 }, // Increased left margin to 150
+                    margin: { t: 50, b: 50, l: 150, r: 50 },
                     autosize: true,
-                    // Adjust plot area to inset data from title
-                    domain: { x: [0.1, 1], y: [0, 1] } // Slight inset on left
+                    domain: { x: [0.1, 1], y: [0, 1] }
                 }, {
                     responsive: true
                 });
@@ -1173,6 +1283,227 @@ async function loadSectionData(section, startDate, endDate) {
                 console.log('[Renderer] No Binance Polar data');
                 if (polarError) polarError.innerHTML = 'No polar data available';
                 if (polarChart) polarChart.innerHTML = '';
+            }
+        } else if (section === 'eth') {
+            const table = document.getElementById('eth-marketStatsTableBody');
+            const lastUpdated = document.getElementById('eth-lastUpdated');
+            const performanceTable = document.getElementById('eth-performanceTableBody');
+            const topFlowsTable = document.getElementById('eth-topFlowsTableBody');
+            const flowsTable = document.getElementById('eth-flowsTableBody');
+            const priceTrendChart = document.getElementById('eth-priceTrendChart');
+            const feesChart = document.getElementById('eth-feesChart');
+            const analysis = document.getElementById('eth-marketAnalysis');
+            const conclusion = document.getElementById('eth-marketConclusion');
+            const priceTrendError = document.getElementById('eth-priceTrendError');
+            const feesError = document.getElementById('eth-feesError');
+
+            console.log(`[Renderer] ETH DOM elements:`, {
+                table: !!table,
+                lastUpdated: !!lastUpdated,
+                performanceTable: !!performanceTable,
+                topFlowsTable: !!topFlowsTable,
+                flowsTable: !!flowsTable,
+                priceTrendChart: !!priceTrendChart,
+                feesChart: !!feesChart,
+                analysis: !!analysis,
+                conclusion: !!conclusion,
+                priceTrendError: !!priceTrendError,
+                feesError: !!feesError
+            });
+
+            if (priceTrendError) priceTrendError.innerHTML = '';
+            if (feesError) feesError.innerHTML = '';
+
+            if (table && data.markets) {
+                console.log('[Renderer] Updating ETH market stats table');
+                table.innerHTML = '';
+                const metrics = [
+                    { key: 'price', label: 'Price (USD)', format: v => `$${v.toFixed(2)}` },
+                    { key: 'percent_change_24h', label: '24h Change (%)', format: v => `${v.toFixed(2)}%` },
+                    { key: 'market_cap', label: 'Market Cap (USD)', format: v => `$${v.toFixed(2)}` },
+                    { key: 'volume_24h', label: '24h Volume (USD)', format: v => `$${v.toFixed(2)}` }
+                ];
+                metrics.forEach(metric => {
+                    if (data.markets[metric.key] !== undefined) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${metric.label}</td><td>${metric.format(data.markets[metric.key])}</td>`;
+                        table.appendChild(row);
+                        console.log(`[Renderer] Added row for ${metric.label}`);
+                    }
+                });
+            }
+
+            if (lastUpdated && data.markets?.last_updated) {
+                console.log('[Renderer] Updating last update');
+                lastUpdated.textContent = new Date(data.markets.last_updated).toLocaleString();
+            }
+
+            if (performanceTable && data.yields) {
+                console.log('[Renderer] Updating ETH performance table');
+                performanceTable.innerHTML = '';
+                const periods = [
+                    { key: 'percent_change_24h', label: '24h' },
+                    { key: 'percent_change_7d', label: '7d' },
+                    { key: 'percent_change_30d', label: '30d' }
+                ];
+                periods.forEach(period => {
+                    if (data.yields[period.key] !== undefined) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${period.label}</td><td>${data.yields[period.key].toFixed(2)}%</td>`;
+                        performanceTable.appendChild(row);
+                        console.log(`[Renderer] Added row for ${period.label}`);
+                    }
+                });
+            }
+
+            if (topFlowsTable && data.top_flows) {
+                console.log('[Renderer] Updating ETH top flows table');
+                topFlowsTable.innerHTML = '';
+                data.top_flows.forEach(flow => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${flow.time}</td>
+                        <td>$${flow.input_total_usd.toFixed(2)}</td>
+                        <td>$${flow.output_total_usd.toFixed(2)}</td>
+                        <td>${flow.is_confirmed ? 'Confirmed' : 'Pending'}</td>
+                    `;
+                    topFlowsTable.appendChild(row);
+                    console.log(`[Renderer] Added row for flow at ${flow.time}`);
+                });
+            }
+
+            if (flowsTable && (data.inflows || data.outflows || data.net_flow)) {
+                console.log('[Renderer] Updating ETH flows table');
+                flowsTable.innerHTML = '';
+                const flows = [
+                    { key: 'inflows', label: 'Inflows (ETH)' },
+                    { key: 'outflows', label: 'Outflows (ETH)' },
+                    { key: 'net_flow', label: 'Net Flow (ETH)' }
+                ];
+                flows.forEach(flow => {
+                    if (data[flow.key] !== undefined) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${flow.label}</td><td>${data[flow.key].toFixed(2)}</td>`;
+                        flowsTable.appendChild(row);
+                        console.log(`[Renderer] Added row for ${flow.label}`);
+                    }
+                });
+            }
+
+            if (priceTrendChart && data.price_history) {
+                console.log('[Renderer] Updating ETH price trend chart');
+                Plotly.purge(priceTrendChart);
+                const trace = {
+                    x: data.price_history.dates,
+                    open: data.price_history.open,
+                    high: data.price_history.high,
+                    low: data.price_history.low,
+                    close: data.price_history.close,
+                    type: 'candlestick',
+                    increasing: { line: { color: '#0d6efd' } },
+                    decreasing: { line: { color: '#dc3545' } }
+                };
+                Plotly.newPlot(priceTrendChart, [trace], {
+                    title: {
+                        font: { family: 'Arial, sans-serif', size: 18, color: '#ffffff' }
+                    },
+                    xaxis: {
+                        title: { text: 'Date', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333',
+                        range: [startDate, endDate]
+                    },
+                    yaxis: {
+                        title: { text: 'Price (USD)', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333'
+                    },
+                    plot_bgcolor: '#1e1e1e',
+                    paper_bgcolor: '#1e1e1e',
+                    margin: { t: 50, b: 50, l: 100, r: 50 },
+                    autosize: true
+                }, {
+                    responsive: true
+                });
+            } else if (priceTrendChart) {
+                console.log('[Renderer] ETH price trend chart not updated: missing price_history data');
+                Plotly.purge(priceTrendChart);
+                if (priceTrendError) priceTrendError.innerHTML = 'No price history data available';
+            }
+
+            if (feesChart && data.fees?.dates && data.fees?.values) {
+                console.log('[Renderer] Updating ETH fees chart');
+                Plotly.purge(feesChart);
+                const start = new Date(startDate).getTime();
+                const end = new Date(endDate).getTime();
+                const filteredIndices = data.fees.dates
+                    .map((date, index) => ({ date, index }))
+                    .filter(({ date }) => {
+                        const d = new Date(date).getTime();
+                        return d >= start && d <= end;
+                    })
+                    .map(({ index }) => index);
+                const filteredDates = filteredIndices.map(i => data.fees.dates[i]);
+                const filteredValues = filteredIndices.map(i => data.fees.values[i]);
+
+                if (filteredDates.length === 0) {
+                    console.log('[Renderer] No fee data in selected range');
+                    if (feesError) feesError.innerHTML = 'No fee data available for selected range';
+                    return;
+                }
+
+                const trace = {
+                    x: filteredDates,
+                    y: filteredValues,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Transaction Fees',
+                    line: { color: '#0d6efd', width: 2 },
+                    marker: { size: 8, color: '#0d6efd', symbol: 'circle' }
+                };
+                Plotly.newPlot(feesChart, [trace], {
+                    title: {
+                        text: 'Transaction Fees',
+                        font: { family: 'Arial, sans-serif', size: 18, color: '#ffffff' }
+                    },
+                    xaxis: {
+                        title: { text: 'Date', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333',
+                        range: [startDate, endDate]
+                    },
+                    yaxis: {
+                        title: { text: 'Fee (USD)', font: { color: '#cccccc' } },
+                        tickfont: { color: '#cccccc' },
+                        gridcolor: '#333'
+                    },
+                    plot_bgcolor: '#1e1e1e',
+                    paper_bgcolor: '#1e1e1e',
+                    margin: { t: 50, b: 50, l: 100, r: 50 },
+                    autosize: true
+                }, {
+                    responsive: true
+                });
+            } else if (feesChart) {
+                console.log('[Renderer] Fees chart not updated: missing fee data');
+                Plotly.purge(feesChart);
+                if (feesError) feesError.innerHTML = 'No fee data available';
+            }
+
+            if (analysis && data.analysis) {
+                console.log(`[Renderer] Updating analysis: ${data.analysis}`);
+                analysis.textContent = data.analysis;
+            } else {
+                console.log('[Renderer] No analysis data available');
+                if (analysis) analysis.textContent = 'No analysis available';
+            }
+
+            if (conclusion && data.conclusion) {
+                console.log(`[Renderer] Updating conclusion: ${data.conclusion}`);
+                conclusion.textContent = data.conclusion;
+            } else {
+                console.log('[Renderer] No conclusion data available');
+                if (conclusion) conclusion.textContent = 'No conclusion available';
             }
         } else {
             console.warn(`[Renderer] Unknown section: ${section}`);

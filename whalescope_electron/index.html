@@ -278,11 +278,12 @@
     <h1>WhaleScope</h1>
 
     <div id="navButtons">
-        <button class="navBtn active" data-section="bitcoin-section" onclick="window.showSection('bitcoin')">Bitcoin</button>
-        <button class="navBtn" data-section="blackrock-section" onclick="window.showSection('blackrock')">BlackRock</button>
-        <button class="navBtn" data-section="lido-section" onclick="window.showSection('lido')">Lido</button>
-        <button class="navBtn" data-section="binance-polar-section" onclick="window.showSection('binance-polar')">Binance Polar</button>
-    </div>
+    <button class="navBtn active" data-section="bitcoin-section" onclick="window.showSection('bitcoin')">Bitcoin</button>
+    <button class="navBtn" data-section="blackrock-section" onclick="window.showSection('blackrock')">BlackRock</button>
+    <button class="navBtn" data-section="lido-section" onclick="window.showSection('lido')">Lido</button>
+    <button class="navBtn" data-section="binance-polar-section" onclick="window.showSection('binance-polar')">Binance Polar</button>
+    <button class="navBtn" data-section="eth-section" onclick="window.showSection('eth')">ETH</button>
+</div>
 
     <!-- Bitcoin Section -->
     <div id="bitcoin-section" class="section active">
@@ -577,6 +578,122 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Add this new section after the existing ones (e.g., after Binance Polar) -->
+<div id="eth-section" class="section">
+    <h2>🧠 ETH Analytics</h2>
+    <div id="eth-loading" class="loading">Loading...</div>
+    <div id="eth-status"></div>
+
+    <div id="eth-filters">
+        <label for="eth-startDate">Start Date:</label>
+        <input id="eth-startDate" type="date" value="2025-06-30" />
+        <label for="eth-endDate">End Date:</label>
+        <input id="eth-endDate" type="date" value="2025-07-29" />
+        <button id="eth-refreshBtn" class="filter-btn">🔄 Refresh Data</button>
+        <button id="eth-exportCsvBtn" class="filter-btn">📤 Export CSV</button>
+        <button id="eth-exportPdfBtn" class="filter-btn">📤 Export PDF</button>
+    </div>
+
+    <div class="flex-row">
+        <div class="card card-flex-large">
+            <h3>📉 Price Trend (Historical Data)</h3>
+            <div id="eth-priceTrendError" class="error"></div>
+            <div class="chart-wrapper">
+                <div id="eth-priceTrendChart"></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📊 Market Stats (Updated: <span id="eth-lastUpdated">N/A</span>)</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eth-marketStatsTableBody">
+                        <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📈 Performance Metrics</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Change (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eth-performanceTableBody">
+                        <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-row">
+        <div class="card card-flex-large">
+            <h3>🐳 Whale Activity (Top Flows)</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Input (USD)</th>
+                            <th>Output (USD)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eth-topFlowsTableBody">
+                        <tr><td colspan="4" class="centered-cell">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📥📤 Exchange Flows</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eth-flowsTableBody">
+                        <tr><td colspan="2" class="centered-cell">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-row">
+        <div class="card card-flex-large">
+            <h3>💸 Transaction Fees</h3>
+            <div id="eth-feesError" class="error"></div>
+            <div class="chart-wrapper">
+                <div id="eth-feesChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-row">
+        <div class="analysis-card">
+            <h3>🔍 Market Analysis</h3>
+            <p id="eth-marketAnalysis">Loading analysis...</p>
+            <p id="eth-marketConclusion" class="conclusion">Loading conclusion...</p>
+        </div>
+    </div>
+</div>
+
 
     <script>
         console.log('[Index] Script loaded');
