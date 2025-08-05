@@ -56,7 +56,7 @@ function resolvePythonPaths() {
   return { pythonPath, scriptPath };
 }
 
-// IPC para llamar Python desde renderer y devolver datos
+
 // IPC para llamar Python desde renderer y devolver datos
 ipcMain.handle('load-data', async (event, { section, startDate, endDate }) => {
   console.log(`[Main] Solicitud: ${section} desde ${startDate} hasta ${endDate}`);

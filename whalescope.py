@@ -68,10 +68,12 @@ def update_data(mode, start_date=None, end_date=None):
 
     python_command = get_python_command()
     cmd = [python_command, script]
+
+    # Add date arguments only for modes that require them (exclude binance-polar)
+    if start_date and end_date and mode != 'binance-polar':
+        cmd.extend(['--start-date', start_date, '--end-date', end_date])
     if mode == 'binance-polar':
         cmd.append('binance_polar')
-    elif start_date and end_date:
-        cmd.extend(['--start-date', start_date, '--end-date', end_date])
 
     # Configurar PYTHONPATH para incluir site-packages de Python 3.11
     venv_site_packages = os.path.join(base_dir, 'venv', 'lib', 'python3.11', 'site-packages')
@@ -100,16 +102,16 @@ def update_data(mode, start_date=None, end_date=None):
             cmd,
             capture_output=True,
             text=True,
-            check=True,
             env=env,
             cwd=base_dir  # Establecer directorio de trabajo
         )
-
         stdout_clean = result.stdout.strip()
+        if result.returncode != 0:
+            logger.error("Script failed with return code %d, stderr: %s, stdout: %s", result.returncode, result.stderr, stdout_clean)
+            return {"error": f"Script execution failed with code {result.returncode}: {result.stderr}"}
         if not stdout_clean:
-            logger.error("Empty stdout")
-            return {"error": "Empty output from script"}
-
+            logger.error("Empty stdout, stderr: %s", result.stderr)
+            return {"error": "Empty output from script, stderr: " + result.stderr}
         data = json.loads(stdout_clean)
 
         # Validación mínima para 'lido'
@@ -128,15 +130,11 @@ def update_data(mode, start_date=None, end_date=None):
         logger.info(f"Data saved to {output_file}")
         return data
 
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Script error: {e.stderr}")
-        return {"error": f"Script execution error: {e.stderr}"}
     except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
-        logger.error(f"Output was: {result.stdout}")
+        logger.error("JSON decode error: %s, Output was: %s", e, result.stdout)
         return {"error": f"Invalid JSON output: {e}"}
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error("Unexpected error: %s, stderr: %s", str(e), result.stderr if 'result' in locals() else "N/A")
         return {"error": str(e)}
 
 # === Entry Point ===
