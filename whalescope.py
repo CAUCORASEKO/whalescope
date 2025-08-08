@@ -1,3 +1,4 @@
+# whalescope.py
 import sys
 import subprocess
 import json
@@ -22,21 +23,33 @@ logging.basicConfig(
 def get_python_command():
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Si estamos en producción (dentro del .app)
+    # Producción: Python embebido
     embed_python = os.path.join(base_dir, 'python_embed', 'bin', 'python3.11')
     if os.path.exists(embed_python):
         return embed_python
 
-    # En desarrollo: usar venv si existe
+    # Desarrollo: venv local
     venv_python = os.path.join(base_dir, 'venv', 'bin', 'python3')
     if os.path.exists(venv_python):
         return venv_python
 
-    # Fallback: usar python3 del sistema
+    # Fallback: sistema
     logging.warning("No se encontró python embebido ni venv, usando 'python3'")
     return 'python3'
 
-# === Función principal que ejecuta los scripts por modo ===
+# === Detectar site-packages embebido o venv ===
+def get_site_packages_dir(base_dir):
+    embed_site_packages = os.path.join(base_dir, 'python_embed', 'lib', 'python3.11', 'site-packages')
+    venv_site_packages = os.path.join(base_dir, 'venv', 'lib', 'python3.11', 'site-packages')
+
+    if os.path.exists(embed_site_packages):
+        return embed_site_packages
+    elif os.path.exists(venv_site_packages):
+        return venv_site_packages
+    else:
+        return None
+
+# === Función principal ===
 def update_data(mode, start_date=None, end_date=None):
     logger = logging.getLogger(__name__)
     logger.info(f"Starting data update for mode '{mode}'")
@@ -48,7 +61,7 @@ def update_data(mode, start_date=None, end_date=None):
         'blackrock': os.path.join(base_dir, 'blackrock.py'),
         'lido': os.path.join(base_dir, 'lido_staking.py'),
         'binance-polar': os.path.join(base_dir, 'binance_polar.py'),
-        'eth': os.path.join(base_dir, 'eth.py')  # New ETH script
+        'eth': os.path.join(base_dir, 'eth.py')
     }
 
     output_files = {
@@ -56,7 +69,7 @@ def update_data(mode, start_date=None, end_date=None):
         'blackrock': os.path.join(base_dir, 'blackrock_output.json'),
         'lido': os.path.join(base_dir, 'lido_output.json'),
         'binance-polar': os.path.join(base_dir, 'binance_polar_output.json'),
-        'eth': os.path.join(base_dir, 'eth_output.json')  # New ETH output file
+        'eth': os.path.join(base_dir, 'eth_output.json')
     }
 
     script = scripts.get(mode)
@@ -69,41 +82,41 @@ def update_data(mode, start_date=None, end_date=None):
     python_command = get_python_command()
     cmd = [python_command, script]
 
-    # Add date arguments only for modes that require them (exclude binance-polar)
+    # Fechas solo para algunos modos
     if start_date and end_date and mode != 'binance-polar':
         cmd.extend(['--start-date', start_date, '--end-date', end_date])
     if mode == 'binance-polar':
         cmd.append('binance_polar')
 
-    # Configurar PYTHONPATH para incluir site-packages de Python 3.11
-    venv_site_packages = os.path.join(base_dir, 'venv', 'lib', 'python3.11', 'site-packages')
+    # Configurar entorno
     env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-    if os.path.exists(venv_site_packages):
-        env["PYTHONPATH"] = f"{venv_site_packages}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"
+    site_packages_dir = get_site_packages_dir(base_dir)
+    if site_packages_dir:
+        env["PYTHONPATH"] = f"{site_packages_dir}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"
     else:
-        logger.error(f"site-packages not found at {venv_site_packages}")
-        return {"error": f"site-packages not found at {venv_site_packages}"}
+        logger.error("site-packages not found in either python_embed or venv")
+        return {"error": "site-packages not found in either python_embed or venv"}
 
     logger.info(f"Python command: {python_command}")
     logger.info(f"Executing: {' '.join(cmd)}")
     logger.info(f"PYTHONPATH: {env.get('PYTHONPATH', 'Not set')}")
     logger.info(f"Working directory: {base_dir}")
 
-    # Depurar el Python usado
-    python_version_cmd = [python_command, "--version"]
+    # Versión de Python
     try:
-        version_result = subprocess.run(python_version_cmd, capture_output=True, text=True)
+        version_result = subprocess.run([python_command, "--version"], capture_output=True, text=True)
         logger.info(f"Python version: {version_result.stdout.strip()}")
     except Exception as e:
         logger.error(f"Error checking Python version: {str(e)}")
 
+    # Ejecutar script
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             env=env,
-            cwd=base_dir  # Establecer directorio de trabajo
+            cwd=base_dir
         )
         stdout_clean = result.stdout.strip()
         if result.returncode != 0:
@@ -114,12 +127,11 @@ def update_data(mode, start_date=None, end_date=None):
             return {"error": "Empty output from script, stderr: " + result.stderr}
         data = json.loads(stdout_clean)
 
-        # Validación mínima para 'lido'
+        # Validaciones mínimas
         if mode == 'lido' and not all(k in data for k in ['markets', 'yields', 'analytics', 'charts']):
             logger.error("Missing keys in Lido data")
             return {"error": "Invalid JSON structure from lido"}
 
-        # Validación mínima para 'binance-polar'
         if mode == 'binance-polar' and not isinstance(data, list):
             logger.error("Binance Polar data must be a list of objects")
             return {"error": "Invalid JSON structure from binance-polar"}
