@@ -30,8 +30,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # API Keys
-CMC_API_KEY = "60c68e38-60f8-4d1e-87b1-33d8f6b6e0f2"
-ETHERSCAN_API_KEY = "RG5DUZDHP3DFBYAHM7HFJ1NZ78YS4GEHHJ"
+CMC_API_KEY = "CMC_API_KEY"  # Placeholder, replace with actual key
+ETHERSCAN_API_KEY = "ETHERSCAN_API_KEY"  # Placeholder, replace with actual key
 CMC_BASE_URL = "https://pro-api.coinmarketcap.com"
 ETHERSCAN_BASE_URL = "https://api.etherscan.io/api"
 
