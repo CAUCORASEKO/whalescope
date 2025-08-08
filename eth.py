@@ -32,8 +32,8 @@ except Exception as e:
     sys.exit(1)
 
 # Load environment variables
-API_KEY = os.getenv('API_KEY', 'nGUWm71gEi81rTmdjRkcHq1xrhwnM8V5tuPVviIEtHNs1qCJcETbrvoSeMbTq4Ci')
-API_SECRET = os.getenv('API_SECRET', 'U9OJIPGc42AU2gblGGK3gkl2vh9c176rzkHBa39B0wew6DpkDIcuRlNiZF2UyBk2')
+API_KEY = os.getenv('API_KEY', 'API_KEY')
+API_SECRET = os.getenv('API_SECRET', 'API_SECRET')
 
 # Binance API base URL
 BINANCE_API_URL = "https://api.binance.com"

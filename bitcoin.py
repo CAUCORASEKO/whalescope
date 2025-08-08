@@ -38,8 +38,8 @@ except Exception as e:
     sys.exit(1)
 
 # Binance API configuration
-API_KEY = 'nGUWm71gEi81rTmdjRkcHq1xrhwnM8V5tuPVviIEtHNs1qCJcETbrvoSeMbTq4Ci'
-API_SECRET = 'U9OJIPGc42AU2gblGGK3gkl2vh9c176rzkHBa39B0wew6DpkDIcuRlNiZF2UyBk2'
+API_KEY = 'API_KEY'
+API_SECRET = 'API_SECRET'
 
 # Cache configuration
 CACHE_DIR = "cache"
